@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { evidence } from "./evidence";
 
 /**
  * Task 86: Tailored resume and cover letter.
@@ -32,6 +33,7 @@ test("writes a tailored resume and cover letter that pass the check (done-when)"
   await expect(resume.getByTestId("fact-check")).toContainText("No skills, numbers or names found");
   await expect(letter.getByTestId("fact-check")).toContainText("No skills, numbers or names found");
   await expect(umbrella.getByRole("button", { name: "Regenerate documents" })).toBeVisible();
+  await evidence(umbrella.locator("details", { hasText: "Tailored resume & cover letter" }), "86-tailored-docs-check-passed");
 });
 
 test("copy buttons put the exact text on the clipboard", async ({ page, context }) => {
@@ -75,6 +77,9 @@ test("flags invented skills, numbers and companies", async ({ page }) => {
   const letterFlags = letterDoc(page, "Soylent").getByRole("list", { name: "Not on your resume" }).getByRole("listitem");
   await expect(letterFlags).toHaveText(["Skill: Kubernetes"]);
   await expect(letterDoc(page, "Soylent").getByTestId("fact-check")).toContainText("1 item isn't on your resume.");
+  // Scroll the resume box to the invented line so the flagged text and the flags are both visible.
+  await resumeDoc(page, "Soylent").locator("pre").evaluate((el) => (el.scrollTop = el.scrollHeight));
+  await evidence(card(page, "Soylent").locator("details", { hasText: "Tailored resume & cover letter" }), "86-fact-check-flags-invented-items");
 });
 
 test("shows a friendly error when the model is busy and saves nothing", async ({ page }) => {

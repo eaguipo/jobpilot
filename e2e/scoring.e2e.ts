@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { evidence } from "./evidence";
 
 /**
  * Task 85: LLM match score.
@@ -60,6 +61,7 @@ test("scores a job and shows the score, requirements met and gaps (done-when)", 
   await expect(panel.getByRole("list", { name: "Gaps" }).getByRole("listitem")).toHaveText(["GraphQL", "AWS"]);
   await expect(panel).toContainText("Gaps are never added to your tailored resume.");
   await expect(umbrella.getByRole("button", { name: "Re-score" })).toBeVisible();
+  await evidence(umbrella, "85-match-score-met-and-gaps");
 });
 
 test("keeps the score after a reload", async ({ page }) => {

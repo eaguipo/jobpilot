@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { evidence } from "./evidence";
 
 /**
  * Task 87: Tracker list.
@@ -49,6 +50,7 @@ test("keeps a status history, newest first", async ({ page }) => {
   await expect(historyItems(page, "Acme Corp")).toHaveText([/Applied → Interviewing$/, /Matched → Applied$/, /Added as Matched$/]);
   // "Applied <date>" stays even after moving on to Interviewing.
   await expect(card(page, "Acme Corp")).toContainText(/Applied [A-Z][a-z]{2} \d{1,2}, \d{4}/);
+  await evidence(card(page, "Acme Corp"), "87-status-saved-with-history");
 });
 
 test("filter chips show counts and filter the list", async ({ page }) => {
@@ -72,6 +74,7 @@ test("filter chips show counts and filter the list", async ({ page }) => {
   await expect(page.getByTestId("job-card")).toHaveCount(1);
   await expect(page.getByTestId("job-card")).toContainText("Acme Corp");
   await expect(chips(page).getByRole("link", { name: "Interviewing (1)" })).toHaveAttribute("aria-current", "page");
+  await evidence(page, "87-filter-by-status");
 
   await chips(page).getByRole("link", { name: "Offer (0)" }).click();
   await expect(page.getByText("No jobs with status Offer.")).toBeVisible();

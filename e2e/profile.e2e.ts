@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { evidence } from "./evidence";
 
 /**
  * Task 83: Profile page – paste master resume.
@@ -66,6 +67,7 @@ test("saves the resume and keeps it after a reload (done-when)", async ({ page }
   await page.reload();
   await expect(resumeBox(page)).toHaveValue(RESUME);
   await expect(status(page)).toContainText(/^Saved /);
+  await evidence(page, "83-profile-resume-saved-after-reload");
 });
 
 test("shows Unsaved changes while editing and clears it when the edit is undone", async ({ page }) => {
