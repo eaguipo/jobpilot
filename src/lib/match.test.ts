@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { LlmError } from "./llm";
-import { buildMatchPrompt, fakeGenerate, MATCH_SCHEMA, MATCH_SYSTEM_PROMPT, MAX_ITEMS, parseMatchResult, scoreMatch } from "./match";
+import { fakeGenerate } from "./fake-llm";
+import { buildMatchPrompt, MATCH_SCHEMA, MATCH_SYSTEM_PROMPT, MAX_ITEMS, parseMatchResult, scoreMatch } from "./match";
 
 const input = {
   resume: "Jane Doe\n5 years React and TypeScript at Acme.",

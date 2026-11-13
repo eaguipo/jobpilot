@@ -12,7 +12,7 @@
     "typecheck": "tsc --noEmit",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "test:live": "GEMINI_LIVE=1 node --env-file-if-exists=.env.local ./node_modules/vitest/vitest.mjs run src/lib/match.live.test.ts"
+    "test:live": "GEMINI_LIVE=1 node --env-file-if-exists=.env.local ./node_modules/vitest/vitest.mjs run .live.test"
   },
   "dependencies": {
     "better-sqlite3": "^13.1.1",

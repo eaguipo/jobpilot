@@ -3,7 +3,10 @@ import Link from "next/link";
 import { getDb, getProfile, listJobs } from "@/lib/db";
 import { AddJobForm } from "./add-job-form";
 import { MatchPanel } from "./match-panel";
-import { ScoreButton } from "./score-button";
+import { JobActionButton } from "./job-action-button";
+import { scoreJobAction } from "./score-actions";
+import { tailorJobAction } from "./tailor-actions";
+import { TailoredDocs } from "./tailored-docs";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Jobs · JobPilot" };
@@ -15,12 +18,12 @@ function formatDate(iso: string) {
 export default function JobsPage() {
   const db = getDb();
   const jobs = listJobs(db);
-  const hasResume = getProfile(db) !== null;
+  const profile = getProfile(db);
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-8">
       <h1 className="text-2xl font-semibold">Jobs</h1>
       <p className="mt-1 mb-6 text-sm text-black/60 dark:text-white/60">
-        Add a job you found, then score how well your resume matches it. Tailored documents come next.
+        Add a job you found, score how well your resume matches it, then get a tailored resume and cover letter.
       </p>
 
       <section aria-labelledby="add-job" className="rounded-xl border border-black/10 p-4 dark:border-white/15">
@@ -54,12 +57,34 @@ export default function JobsPage() {
                   <span className="text-black/50 dark:text-white/50">Added {formatDate(job.createdAt)}</span>
                 </div>
                 {job.score !== null && <MatchPanel job={{ ...job, score: job.score }} />}
+                {profile && job.tailoredResume !== null && job.coverLetter !== null && (
+                  <TailoredDocs job={{ ...job, tailoredResume: job.tailoredResume, coverLetter: job.coverLetter }} resume={profile.resumeText} />
+                )}
                 <div className="mt-3">
-                  {hasResume ? (
-                    <ScoreButton jobId={job.id} scored={job.score !== null} />
+                  {profile ? (
+                    <div className="flex flex-col gap-2">
+                      <JobActionButton
+                        jobId={job.id}
+                        action={scoreJobAction}
+                        done={job.score !== null}
+                        label="Score match"
+                        redoLabel="Re-score"
+                        pendingLabel="Scoring…"
+                        pendingNote="Asking Gemini, this can take up to 20 seconds."
+                      />
+                      <JobActionButton
+                        jobId={job.id}
+                        action={tailorJobAction}
+                        done={job.tailoredResume !== null}
+                        label="Tailor resume & cover letter"
+                        redoLabel="Regenerate documents"
+                        pendingLabel="Writing…"
+                        pendingNote="Gemini is writing your documents, this can take up to 40 seconds."
+                      />
+                    </div>
                   ) : (
                     <p className="text-xs text-black/60 dark:text-white/60">
-                      <Link href="/profile" className="text-blue-700 underline dark:text-blue-300">Add your resume</Link> to score this job.
+                      <Link href="/profile" className="text-blue-700 underline dark:text-blue-300">Add your resume</Link> to score this job and tailor your documents.
                     </p>
                   )}
                 </div>
