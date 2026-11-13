@@ -4,6 +4,10 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   addJob,
+  countJobsByStatus,
+  isJobStatus,
+  listStatusEvents,
+  listStatusEventsByJob,
   deleteJob,
   getJob,
   getProfile,
@@ -88,6 +92,59 @@ describe("jobs", () => {
   });
 });
 
+describe("status history (migration v3)", () => {
+  it("records an event when a job is added", () => {
+    const job = addJob(db, sample);
+    expect(listStatusEvents(db, job.id)).toEqual([
+      { id: expect.any(Number), jobId: job.id, fromStatus: null, toStatus: "Matched", changedAt: job.createdAt },
+    ]);
+  });
+
+  it("records real status changes only, newest first", () => {
+    const { id } = addJob(db, sample);
+    updateJob(db, id, { status: "Applied" });
+    updateJob(db, id, { status: "Applied" }); // no change
+    updateJob(db, id, { score: 70 }); // not a status change
+    updateJob(db, id, { status: "Interviewing" });
+    expect(listStatusEvents(db, id).map((e) => [e.fromStatus, e.toStatus])).toEqual([
+      ["Applied", "Interviewing"],
+      ["Matched", "Applied"],
+      [null, "Matched"],
+    ]);
+  });
+
+  it("does not record anything when the status is invalid", () => {
+    const { id } = addJob(db, sample);
+    expect(() => updateJob(db, id, { status: "Ghosted" as never })).toThrow();
+    expect(listStatusEvents(db, id)).toHaveLength(1);
+    expect(getJob(db, id)?.status).toBe("Matched");
+  });
+
+  it("groups history by job and deletes it with the job", () => {
+    const a = addJob(db, sample);
+    const b = addJob(db, { ...sample, applyUrl: "https://jobs.lever.co/x/2" });
+    updateJob(db, b.id, { status: "Rejected" });
+    const byJob = listStatusEventsByJob(db);
+    expect(byJob.get(a.id)).toHaveLength(1);
+    expect(byJob.get(b.id)?.map((e) => e.toStatus)).toEqual(["Rejected", "Matched"]);
+    deleteJob(db, b.id);
+    expect(listStatusEvents(db, b.id)).toEqual([]);
+  });
+
+  it("counts jobs per status, including zeros", () => {
+    const a = addJob(db, sample);
+    addJob(db, { ...sample, applyUrl: "https://jobs.lever.co/x/2" });
+    updateJob(db, a.id, { status: "Offer" });
+    expect(countJobsByStatus(db)).toEqual({ Matched: 1, Applied: 0, Interviewing: 0, Offer: 1, Rejected: 0 });
+  });
+
+  it("recognises valid statuses", () => {
+    expect(isJobStatus("Applied")).toBe(true);
+    expect(isJobStatus("applied")).toBe(false);
+    expect(isJobStatus(undefined)).toBe(false);
+  });
+});
+
 describe("unique apply link (migration v2)", () => {
   it("refuses a second job with the same link", () => {
     addJob(db, sample);
@@ -111,20 +168,25 @@ describe("file database", () => {
     }
   });
 
-  it("upgrades a v1 database to v2 without losing data", () => {
+  it("upgrades a v1 database to the latest version without losing data", () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "jobpilot-"));
     const file = path.join(dir, "v1.db");
     try {
-      // Simulate a database created before task 84: no unique index, user_version 1.
+      // Simulate a database created before task 84: data saved, then no unique index,
+      // no status history, user_version 1.
       const old = openDb(file);
-      old.exec("DROP INDEX jobs_apply_url_uq");
-      old.pragma("user_version = 1");
       saveProfile(old, "my resume");
       const { id } = addJob(old, sample);
+      old.exec("DROP INDEX jobs_apply_url_uq; DROP TABLE status_events;");
+      old.pragma("user_version = 1");
       old.close();
 
       const upgraded = openDb(file);
-      expect(upgraded.pragma("user_version", { simple: true })).toBe(2);
+      expect(upgraded.pragma("user_version", { simple: true })).toBe(3);
+      // v3 back-fills one "added" event per existing job, at the job's creation time.
+      expect(listStatusEvents(upgraded, id)).toEqual([
+        { id: expect.any(Number), jobId: id, fromStatus: null, toStatus: "Matched", changedAt: getJob(upgraded, id)!.createdAt },
+      ]);
       expect(getProfile(upgraded)?.resumeText).toBe("my resume");
       expect(getJob(upgraded, id)?.company).toBe("Acme");
       expect(() => addJob(upgraded, sample)).toThrow(/UNIQUE/);

@@ -30,7 +30,7 @@ export function AddJobForm() {
     ) : null;
 
   return (
-    <form key={formKey} action={action} noValidate className="flex flex-col gap-4">
+    <form key={formKey} action={action} noValidate aria-label="Add a job" className="flex flex-col gap-4">
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-1">
           <label htmlFor="company" className="text-sm font-medium">Company</label>
