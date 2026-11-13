@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { RESUME_MAX_CHARS, RESUME_MIN_CHARS } from "@/lib/profile";
 import { saveResume, type SaveState } from "./actions";
 
@@ -11,6 +11,9 @@ function formatTime(iso: string) {
 export function ProfileForm({ initialText, initialUpdatedAt }: { initialText: string; initialUpdatedAt: string | null }) {
   const [state, action, pending] = useActionState<SaveState, FormData>(saveResume, { status: "idle" });
   const [text, setText] = useState(initialText);
+  // Until React loads, keep Save enabled so the plain HTML form still works without JavaScript.
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => setHydrated(true), []);
 
   // Only what the server confirmed counts as saved (it tidies whitespace, so compare trimmed).
   const savedText = state.status === "saved" ? state.text : initialText;
@@ -41,7 +44,7 @@ export function ProfileForm({ initialText, initialUpdatedAt }: { initialText: st
       <div className="flex flex-wrap items-center gap-3">
         <button
           type="submit"
-          disabled={pending || !dirty}
+          disabled={hydrated && (pending || !dirty)}
           className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {pending ? "Saving…" : "Save resume"}

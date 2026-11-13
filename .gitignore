@@ -48,3 +48,11 @@ next-env.d.ts
 
 # claude code local settings
 .claude/settings.local.json
+
+# playwright e2e
+/.e2e/
+/.next-e2e/
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
