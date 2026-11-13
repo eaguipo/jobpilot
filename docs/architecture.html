@@ -1,0 +1,299 @@
+<title>JobPilot Architecture</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column (~72ch) with wide breakouts for diagrams and tables; a sticky section index on wide screens. */
+:root {
+  --paper: #f6f7f9;
+  --surface: #ffffff;
+  --ink: #1b2330;
+  --muted: #5a6474;
+  --line: #d9dee6;
+  --accent: #2756c7;      /* pipeline blue */
+  --free: #1d7a52;        /* $0 green */
+  --warn: #a35a00;
+  --risk: #b3261e;
+  --chip-free: #e3f3ea;
+  --chip-warn: #fbefdc;
+  --chip-risk: #fbe4e2;
+  --chip-info: #e6edfb;
+  --f-display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --f-body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #12161d; --surface: #1a2029; --ink: #e6e9ee; --muted: #9aa4b3; --line: #2c3440;
+    --accent: #7ea2ff; --free: #5cc995; --warn: #e3a54f; --risk: #f08a82;
+    --chip-free: #173326; --chip-warn: #3a2a12; --chip-risk: #3d1c1a; --chip-info: #1c2a4a;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #12161d; --surface: #1a2029; --ink: #e6e9ee; --muted: #9aa4b3; --line: #2c3440;
+  --accent: #7ea2ff; --free: #5cc995; --warn: #e3a54f; --risk: #f08a82;
+  --chip-free: #173326; --chip-warn: #3a2a12; --chip-risk: #3d1c1a; --chip-info: #1c2a4a;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--paper); color: var(--ink);
+  font: 400 1.0625rem/1.6 var(--f-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 1080px; margin: 0 auto; padding-block: 48px 96px; display: grid; gap: 56px; }
+header { display: grid; gap: 16px; max-width: 72ch; }
+.eyebrow { font: 500 0.75rem/1 var(--f-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+h1, h2, h3 { font-family: var(--f-display); text-wrap: balance; margin: 0; line-height: 1.15; }
+h1 { font-size: clamp(2rem, 5vw, 3rem); font-weight: 700; letter-spacing: -0.02em; }
+h2 { font-size: 1.6rem; font-weight: 700; letter-spacing: -0.01em; }
+h3 { font-size: 1.15rem; font-weight: 500; }
+p { margin: 0; }
+.lede { font-size: 1.2rem; color: var(--muted); }
+.constraints { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { font: 500 0.78rem/1 var(--f-mono); padding: 6px 10px; border-radius: 999px; background: var(--chip-info); color: var(--accent); white-space: nowrap; }
+.chip.free { background: var(--chip-free); color: var(--free); }
+.chip.warn { background: var(--chip-warn); color: var(--warn); }
+.chip.risk { background: var(--chip-risk); color: var(--risk); }
+section { display: grid; gap: 20px; min-width: 0; }
+section > p, section > ul, section > ol { max-width: 72ch; }
+ul, ol { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
+code, .mono { font-family: var(--f-mono); font-size: 0.88em; }
+
+.ideas { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+.idea { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 20px; display: grid; gap: 8px; align-content: start; }
+.idea .n { font: 500 0.75rem/1 var(--f-mono); color: var(--free); letter-spacing: 0.06em; text-transform: uppercase; }
+
+.figure { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 20px; overflow-x: auto; }
+.figure .mermaid { margin: 0; min-width: 640px; background: transparent; }
+.caption { font-size: 0.92rem; color: var(--muted); max-width: 72ch; }
+
+.tbl { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; min-width: 680px; font-size: 0.95rem; }
+th, td { text-align: left; padding: 12px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font: 500 0.72rem/1.2 var(--f-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); background: var(--paper); }
+tr:last-child td { border-bottom: 0; }
+td.num { font-variant-numeric: tabular-nums; font-family: var(--f-mono); font-size: 0.88rem; white-space: nowrap; }
+td strong { font-weight: 600; }
+
+.steps { counter-reset: s; list-style: none; padding: 0; display: grid; gap: 0; max-width: 80ch; }
+.steps li { counter-increment: s; display: grid; grid-template-columns: 40px 1fr; gap: 12px; padding: 14px 0; border-top: 1px solid var(--line); }
+.steps li::before { content: counter(s); font: 500 0.85rem/1.6 var(--f-mono); color: var(--accent); }
+.steps b { font-weight: 600; }
+.steps .where { display: block; font: 400 0.8rem/1.4 var(--f-mono); color: var(--muted); margin-top: 2px; }
+
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 20px; display: grid; gap: 10px; align-content: start; min-width: 0; }
+
+.decide { display: grid; gap: 12px; }
+.q { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px 20px; display: grid; gap: 4px; }
+.q .rec { font-size: 0.95rem; color: var(--muted); }
+.q .rec b { color: var(--free); font-weight: 600; }
+footer { font-size: 0.85rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 20px; }
+a { color: var(--accent); }
+</style>
+
+<div class="wrap">
+
+<header>
+  <div class="eyebrow">JobPilot · System architecture · v0.1 · 13 Nov 2026</div>
+  <h1>Run a multi-user job-hunt agent for $0 a month</h1>
+  <p class="lede">The server only stores data and runs a light schedule. The two costly jobs, filling application forms and calling an LLM, happen on resources each user already has: their own browser and their own API key.</p>
+  <div class="constraints">
+    <span class="chip free">$0 / month hosting</span>
+    <span class="chip">Online, any device</span>
+    <span class="chip">Multi-user from day one</span>
+    <span class="chip">“Ask me first” by default</span>
+    <span class="chip">No LinkedIn / Indeed</span>
+  </div>
+</header>
+
+<section>
+  <h2>Three choices that keep it free</h2>
+  <div class="ideas">
+    <div class="idea">
+      <span class="n">Browser extension submits</span>
+      <h3>The user's browser fills the forms</h3>
+      <p>Running headless browsers on a server is the costliest part of this kind of app, and job sites block data-center IPs. A JobPilot browser extension fills and submits forms from the user's own Chrome, on their home connection and with their own sign-ins. Each new user brings their own compute.</p>
+    </div>
+    <div class="idea">
+      <span class="n">Bring your own key</span>
+      <h3>Each user brings their own LLM key</h3>
+      <p>Scoring, tailoring and drafting answers run on a key the user pastes in Settings. The key is stored encrypted. A Gemini free-tier key costs the user nothing, and any paid key also works. JobPilot never pays for tokens.</p>
+    </div>
+    <div class="idea">
+      <span class="n">Shared catalog</span>
+      <h3>Fetch each job board once</h3>
+      <p>Greenhouse, Lever and Ashby publish free JSON job feeds. Each company board is fetched once per run, however many users there are. Matching is then done per user against that one shared job table.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>System map</h2>
+  <div class="figure">
+<pre class="mermaid">
+flowchart LR
+  subgraph U["User's computer · their CPU, their home IP"]
+    WEB["JobPilot web app"]
+    EXT["JobPilot extension<br/>fills forms · submits · screenshots"]
+  end
+  subgraph V["Vercel Hobby · free"]
+    NEXT["Next.js UI + API routes<br/>paste a link · tailor on demand"]
+  end
+  subgraph S["Supabase Free"]
+    AUTH["Auth<br/>email + Google"]
+    DB[("Postgres + row-level security<br/>jobs · applications · task queue")]
+    ST["Storage<br/>resumes · screenshots"]
+    VAULT["Vault<br/>encrypted LLM keys"]
+  end
+  subgraph G["GitHub Actions · private repo · free minutes"]
+    CRON["Scheduled worker, 2x daily<br/>discover, filter, score, tailor"]
+  end
+  BOARDS["Greenhouse / Lever / Ashby<br/>public job feeds"]
+  LLM["User's own LLM key<br/>Gemini free tier or any provider"]
+  MAIL["Resend free tier<br/>daily digest email"]
+  ATS["Company apply pages"]
+
+  WEB --> NEXT
+  NEXT --> AUTH
+  NEXT --> DB
+  NEXT --> ST
+  NEXT --> LLM
+  CRON --> BOARDS
+  CRON --> DB
+  CRON --> VAULT
+  CRON --> LLM
+  CRON --> MAIL
+  EXT -- "pull approved tasks" --> DB
+  EXT -- "upload screenshot" --> ST
+  EXT -- "submit like a person" --> ATS
+</pre>
+  </div>
+  <p class="caption">The schedule runs on GitHub Actions, not Vercel. Vercel Hobby cron jobs can run only once a day, and each scheduled run also keeps the free Supabase project from pausing.</p>
+</section>
+
+<section>
+  <h2>One job, start to finish</h2>
+  <ol class="steps">
+    <li><div><b>Discover.</b> The scheduled worker fetches the shared list of company boards and upserts the jobs into a shared <code>jobs</code> table, deduplicated by a hash of company, title and location. A user can also paste a link, which goes through the same parser.<span class="where">GitHub Actions · Next.js API for pasted links</span></div></li>
+    <li><div><b>Filter without an LLM.</b> SQL drops jobs that don't fit each user's preferences: titles, locations, excluded companies, already applied. This costs nothing and leaves a short list for each user.<span class="where">Postgres</span></div></li>
+    <li><div><b>Score.</b> Using the user's own key, the LLM returns a 0–100 score plus the requirements met and the gaps. A daily cap per user (for example 30 scores) keeps it inside a free-tier quota.<span class="where">GitHub Actions → user's LLM</span></div></li>
+    <li><div><b>Tailor and validate.</b> Jobs above the threshold get a tailored resume and cover letter, stored as structured JSON. A rule-based validator checks that every employer, title, date, skill and metric appears in the master profile. If any claim fails, the draft is regenerated.<span class="where">GitHub Actions or Next.js API (Tailor now)</span></div></li>
+    <li><div><b>Classify the form.</b> Greenhouse's public API lists each posting's application questions, so many forms can be classified on the server. For other sites, the extension inspects the page when it opens the link. Forms with screening questions, surveys, assessments, sign-ups or a CAPTCHA go to <b>Needs you</b>.<span class="where">Worker for Greenhouse · extension for the rest</span></div></li>
+    <li><div><b>Review.</b> The user approves, edits or skips on the Review screen. Approving adds a submission task to the queue.<span class="where">Next.js · Postgres task queue</span></div></li>
+    <li><div><b>Submit.</b> The extension picks up approved tasks while the browser is open. It respects the daily cap and a per-site throttle, fills the form, attaches PDFs rendered in the browser, submits, and uploads a screenshot. The status changes to Applied.<span class="where">Extension → company site · Storage</span></div></li>
+    <li><div><b>Track.</b> Status changes are written to <code>status_events</code>. A follow-up reminder appears 7 days after Applied if there's no response. The daily digest email lists new matches and items in Needs you.<span class="where">Postgres · Resend</span></div></li>
+  </ol>
+</section>
+
+<section>
+  <h2>Components and their free limits</h2>
+  <div class="tbl">
+    <table>
+      <thead><tr><th>Component</th><th>Runs on</th><th>Free allowance</th><th>Watch out for</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Web app + API</strong><br>Next.js</td><td>Vercel Hobby</td><td>Free hosting; cron once per day (not used)</td><td><span class="chip warn">Non-commercial only</span> If JobPilot ever charges users, move to Cloudflare Workers (free tier allows commercial use) or Vercel Pro.</td></tr>
+        <tr><td><strong>Database, auth, files</strong></td><td>Supabase Free</td><td class="num">500 MB DB · 1 GB files · 50k MAU · 2 projects</td><td><span class="chip warn">Pauses after 7 idle days</span> The twice-daily worker keeps it awake. The project goes read-only above 500 MB.</td></tr>
+        <tr><td><strong>Task queue</strong></td><td>Postgres table + <code>FOR UPDATE SKIP LOCKED</code></td><td>Included in the DB</td><td>Replaces BullMQ + Redis from the backlog, so there's no Redis to host.</td></tr>
+        <tr><td><strong>Scheduled worker</strong><br>Node script</td><td>GitHub Actions</td><td class="num">2,000 min/mo on a private repo</td><td>About 10 min per run × 2 runs × 30 days ≈ 600 min. Keep the repo private, because public repos show their Action logs to everyone.</td></tr>
+        <tr><td><strong>LLM</strong></td><td>User's own key</td><td>Gemini free tier, about 1,000 requests/day on Flash-Lite (check AI Studio)</td><td><span class="chip risk">Free-tier data trains Google's models</span> Warn users before they paste in their resume, and offer a paid key as the private option.</td></tr>
+        <tr><td><strong>Submitting forms</strong></td><td>Browser extension (Chrome MV3)</td><td>The user's machine</td><td><span class="chip warn">Chrome Web Store: one-time $5 developer fee</span> To stay at $0: sideload it or publish on Firefox Add-ons (free).</td></tr>
+        <tr><td><strong>PDF rendering</strong></td><td>In the browser</td><td>The user's machine</td><td>Render the ATS-friendly template from the resume JSON on demand. Only the JSON is stored, which saves storage.</td></tr>
+        <tr><td><strong>Email digest</strong></td><td>Resend</td><td>Free tier, about 100/day (check)</td><td>A single daily digest per user keeps under the cap until about 100 users. Use web push for the rest.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2>Data model</h2>
+  <div class="figure">
+<pre class="mermaid">
+erDiagram
+  USERS ||--|| PROFILES : has
+  USERS ||--|| PREFERENCES : sets
+  USERS ||--o| LLM_KEYS : "stores (Vault)"
+  BOARDS ||--o{ JOBS : publishes
+  JOBS ||--o{ MATCHES : "scored for"
+  USERS ||--o{ MATCHES : receives
+  MATCHES ||--o| APPLICATIONS : "becomes"
+  APPLICATIONS ||--o{ DOCUMENTS : "tailored resume / letter"
+  APPLICATIONS ||--o{ STATUS_EVENTS : history
+  APPLICATIONS ||--o{ TASKS : "submit / classify"
+  USERS ||--o{ AUDIT_EVENTS : logs
+
+  JOBS { uuid id text source text company text title text location text apply_url text dedupe_hash jsonb questions }
+  MATCHES { uuid user_id uuid job_id int score jsonb met jsonb gaps }
+  APPLICATIONS { uuid id uuid user_id text status text needs_you_reason date applied_on }
+  DOCUMENTS { uuid id text kind jsonb content jsonb diff bool validated }
+  TASKS { uuid id text kind text state timestamptz run_after int attempts }
+</pre>
+  </div>
+  <div class="two">
+    <div class="panel">
+      <h3>How users are kept apart</h3>
+      <ul>
+        <li>Every user-owned table has a <code>user_id</code> column, with row-level security set to <code>user_id = auth.uid()</code>.</li>
+        <li><code>boards</code> and <code>jobs</code> are a shared catalog that users can read but not write. Only the worker writes to them.</li>
+        <li>The extension signs in with the user's Supabase session, so it can only see that user's tasks.</li>
+        <li>Only the worker holds the service-role key, as a GitHub secret. The browser never sees it.</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3>Rough capacity on free tiers</h3>
+      <ul>
+        <li>Shared jobs: 5,000 postings × about 8 KB ≈ <span class="mono">40 MB</span></li>
+        <li>Per user, after 300 applications with documents stored as JSON (about 5 KB): ≈ <span class="mono">2 MB</span></li>
+        <li>Screenshots: compressed JPEG of about 60 KB, kept for 30 days</li>
+        <li>That puts the ceiling at roughly <b>100–150 active users</b> before the 500 MB database or 1 GB of file storage fills up.</li>
+        <li>The first paid step after that is Supabase Pro at $25/mo. Nothing else needs to change.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>Risks and mitigations</h2>
+  <div class="tbl">
+    <table>
+      <thead><tr><th>Risk</th><th>Impact</th><th>Mitigation</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Auto-submit only runs while the browser is open</strong></td><td><span class="chip warn">Medium</span></td><td>This fits the default “Ask me first” mode: the user approves, then the queue drains next time Chrome is open. A server-side Playwright worker can be added later if needed.</td></tr>
+        <tr><td><strong>Job sites change their forms or add bot checks</strong></td><td><span class="chip warn">Medium</span></td><td>Write a field-mapping adapter for each ATS (Greenhouse, Lever, Ashby first). If a form can't be classified, send it to Needs you. Never try to solve a CAPTCHA.</td></tr>
+        <tr><td><strong>Resumes sent to a free LLM tier are used for training</strong></td><td><span class="chip risk">High (privacy)</span></td><td>Show a clear warning when the user adds their key, recommend a paid key, and send the LLM only the profile fields it needs.</td></tr>
+        <tr><td><strong>Free tiers change without notice</strong></td><td><span class="chip warn">Medium</span></td><td>Oracle halved its free ARM allowance in 2026, which is why this design doesn't depend on it. Keep everything portable: plain Postgres, a plain Node worker, standard Next.js.</td></tr>
+        <tr><td><strong>The LLM invents experience</strong></td><td><span class="chip risk">High</span></td><td>A rule-based validator checks every claim against the profile JSON before the user sees it, and the Review screen shows a diff against the master resume.</td></tr>
+        <tr><td><strong>A leaked API key</strong></td><td><span class="chip risk">High</span></td><td>Store keys in Supabase Vault, decrypt them only in the worker or the API route, and never return them to the browser or write them to logs.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2>Changes to the backlog</h2>
+  <ul>
+    <li><b>Task 71, project setup:</b> replace BullMQ + Redis + server Playwright with a Postgres task queue, a GitHub Actions worker and the browser extension.</li>
+    <li><b>Story 52, auto-submit:</b> the extension submits, not a server browser.</li>
+    <li><b>New story, LLM key settings:</b> add a key, validate it with a test call, show the privacy warning, and show daily usage.</li>
+    <li><b>New epic, browser extension:</b> sign-in, task polling, field adapters for each ATS, screenshot upload, and classifying forms on non-Greenhouse sites.</li>
+    <li><b>Task 72, authentication:</b> multi-user from the start, with row-level security on every table.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>Decisions to confirm</h2>
+  <div class="decide">
+    <div class="q"><h3>Extension store</h3><p class="rec">Recommended: <b>sideload for now and publish on Firefox Add-ons (free)</b>. Pay Chrome's one-time $5 fee only when outside users join.</p></div>
+    <div class="q"><h3>Default LLM provider</h3><p class="rec">Recommended: <b>let users pick any provider</b> and suggest Gemini's free tier, with the privacy warning.</p></div>
+    <div class="q"><h3>Commercial plans</h3><p class="rec">Recommended: <b>keep it free and non-commercial</b> so Vercel Hobby is allowed. If you'll charge later, start on Cloudflare Workers instead.</p></div>
+    <div class="q"><h3>Which company boards to seed</h3><p class="rec">Recommended: <b>start with about 200 boards that match your target roles</b>, and let users add boards.</p></div>
+  </div>
+</section>
+
+<footer>Free-tier figures were checked on 13 Nov 2026 against public pricing pages and reporting: Supabase, Vercel, Gemini API and Oracle Cloud. Confirm them on each vendor's own pricing page before you build. Resend's limit is approximate.</footer>
+
+</div>

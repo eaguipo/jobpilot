@@ -1,0 +1,57 @@
+Issue Id,Issue Type,Summary,Description,Priority,Labels,Parent Id
+1,Epic,Profile & master resume,User uploads one master resume and sets job preferences that drive every search and tailoring step.,Highest,mvp,
+2,Epic,Job discovery,Find matching jobs automatically on a schedule and allow adding a job by link.,Highest,mvp,
+3,Epic,Match scoring,Score each job against the profile and explain matched requirements and gaps.,High,mvp,
+4,Epic,Resume & cover letter tailoring,Produce a tailored resume and cover letter per job without inventing experience.,Highest,mvp,
+5,Epic,Application submission & hand-off,Auto-submit simple forms; route forms with extra questions/surveys/assessments to the user with the link and drafts.,Highest,mvp,
+6,Epic,Job hunt tracker,"Pipeline board covering every job from match to offer, with metrics and follow-ups.",High,mvp,
+7,Epic,Platform & safety,"Auth, storage, background jobs, rate limits, audit log and notifications.",High,mvp,
+8,Epic,Prototype (walking skeleton),"Single-user local prototype of the core loop: paste resume, add job, match score, tailored resume and cover letter, simple tracker. Next.js 15 + SQLite. Partly delivers stories 11-13, 22, 31-32, 41-43, 55, 61-62, 71, 73.",Highest,prototype,
+9,Epic,Browser extension,Chrome/Firefox extension that submits applications from the user's own browser and classifies forms on non-Greenhouse sites. Replaces server-side Playwright.,High,extension,
+11,Story,Upload master resume (PDF/DOCX),AC: user uploads PDF or DOCX up to 5 MB; file stored; parse job queued.,Highest,profile,1
+12,Story,Parse resume into structured profile,"AC: extract contact, summary, experience (title/company/dates/bullets), education, skills into JSON; show on Profile page.",Highest,profile,1
+13,Story,Edit parsed profile,AC: user can correct any parsed field; edits become the source of truth for tailoring.,High,profile,1
+14,Story,Job preferences form,"AC: target titles, locations/remote, min salary, seniority, excluded companies, daily application cap; saved per user.",Highest,profile,1
+15,Story,Approval mode setting,AC: 'Ask me first' (default) or 'Auto-submit above N% match'; respected by submission service.,High,profile,1
+16,Story,LLM API key settings,"AC: user adds their own LLM key (Gemini free tier suggested, any provider allowed); key validated with a test call and stored encrypted in Supabase Vault; never returned to the browser or logged; privacy warning that free tiers may use data for training; daily usage shown.",Highest,profile,1
+21,Story,Greenhouse / Lever / Ashby job board connectors,"AC: fetch public postings for a configured list of company boards; normalise to a Job record (title, company, location, description, apply URL, source).",Highest,discovery,2
+22,Story,Add job by pasting a link,AC: user pastes a posting URL; job page fetched and parsed into a Job record; goes through scoring.,High,discovery,2
+23,Story,Scheduled job search,AC: search runs on a schedule (default 2x daily) and on 'Run job search now'; last/next run shown on Pipeline.,High,discovery,2
+24,Story,Dedupe and filter jobs,"AC: same job from multiple sources stored once; excluded companies, already-applied jobs and wrong locations dropped.",High,discovery,2
+31,Story,LLM match score with explanation,"AC: 0-100 score, list of met requirements and gaps; stored on the Job; jobs under threshold not tailored.",Highest,matching,3
+32,Story,Match details panel on Review screen,"AC: show score bar, met requirements, gaps (marked 'not added to resume').",Medium,matching,3
+41,Story,Generate tailored resume,"AC: reorder/rephrase existing bullets, rewrite summary, add only skills already in profile; output 1-page resume.",Highest,tailoring,4
+42,Story,No-fabrication guardrail,"AC: validator rejects any tailored claim (employer, title, date, skill, metric) not traceable to the master profile; failure logged and regenerated.",Highest,tailoring,4
+43,Story,Generate tailored cover letter,"AC: 250-350 words, references company and role, uses only profile facts; editable before submit.",Highest,tailoring,4
+44,Story,Show diff of changes vs master resume,AC: Review screen highlights added/removed/moved text and lists 'What the agent changed'.,High,tailoring,4
+45,Story,Render resume and cover letter to PDF,AC: clean ATS-friendly PDF template; downloadable from Review and Needs you screens.,High,tailoring,4
+51,Story,Classify application form,"AC: open apply URL and classify as Simple (contact + resume + cover letter) or Needs-you (screening questions, survey, assessment, account signup, CAPTCHA).",Highest,submission,5
+52,Story,Auto-submit simple applications,AC: the JobPilot browser extension fills and submits simple forms from the user's own browser after approval (or auto mode); respects daily cap and per-site throttle; uploads confirmation screenshot; status -> Applied. No server-side browser.,Highest,submission,5
+53,Story,Needs-you queue with application link,"AC: Needs-you jobs list the reason, apply link, tailored files and drafted answers; agent never submits these.",Highest,submission,5
+54,Story,Draft answers for screening questions,AC: draft answers from profile for factual questions; leave legal/demographic/survey questions blank for the user.,Medium,submission,5
+55,Story,Mark as applied (manual),AC: button on Needs-you card moves job to Applied with today's date.,High,submission,5
+56,Story,Review screen approve / edit / skip,AC: approve submits; edit opens editor; skip archives job with reason.,Highest,submission,5
+61,Story,Pipeline board,"AC: columns Matched, Ready to review, Needs you, Applied, Interviewing, Offer, Rejected; cards show role, company, location, match, next step.",Highest,tracker,6
+62,Story,Change status and add notes,AC: drag or menu to change status; notes and contact per job; status history kept.,High,tracker,6
+63,Story,Summary metrics,"AC: matched this week, applied, response rate, interviews shown above the board.",Medium,tracker,6
+64,Story,Follow-up reminders,AC: reminder 7 days after Applied with no response; dismiss or snooze.,Medium,tracker,6
+65,Story,Export tracker to CSV,AC: one-click CSV of all jobs with status and dates.,Low,tracker,6
+71,Task,"Project setup (repo, stack, CI)","Next.js 15 + Supabase (Postgres, Auth, Storage) + Postgres task queue (FOR UPDATE SKIP LOCKED) + GitHub Actions scheduled worker; lint/test in CI. No Redis/BullMQ or server-side Playwright. See docs/architecture.html.",Highest,platform,7
+72,Task,Authentication,Supabase Auth (email + Google); multi-user from day one with row-level security (user_id = auth.uid()) on every user-owned table; shared jobs catalog is read-only to users.,High,platform,7
+73,Task,Data model,"User, Profile, Preferences, Job, Application, Document, StatusEvent tables.",Highest,platform,7
+74,Task,Daily cap and rate limiting,Enforce max applications/day and per-site throttling.,High,platform,7
+75,Task,Audit log,Record every document generated and every submission with timestamp and screenshot.,High,platform,7
+76,Task,Notifications,"Daily email/push digest: new matches, items needing review, Needs-you jobs.",Medium,platform,7
+81,Task,Scaffold Next.js app,Next.js 15 + TypeScript + Tailwind in ~/dev/jobhunt; git init. Done when the dev server returns 200 on localhost. Partly delivers 71.,Highest,prototype,8
+82,Task,SQLite data layer,"Tables profile (resume text) and jobs (company, title, link, description, status, score, met, gaps, resume, cover letter). Done when a test saves and reads a job. Partly delivers 73.",Highest,prototype,8
+83,Task,Profile page: paste master resume,Paste and save master resume as text; persists across reloads. Partly delivers 11-13.,Highest,prototype,8
+84,Task,Add job form,"Company, title, apply link and pasted description; job appears in the list. Partly delivers 22.",Highest,prototype,8
+85,Task,LLM match score,"One Gemini call returns 0-100 score, met requirements and gaps as JSON; saved on the job and shown. Delivers 31-32 for the prototype.",Highest,prototype,8
+86,Task,Tailored resume and cover letter,Generate with an only-use-resume-facts prompt plus a simple check that flags skills/companies not in the resume; copy buttons. Partly delivers 41-43.,Highest,prototype,8
+87,Task,Tracker list,"List of jobs with status dropdown (Matched, Applied, Interviewing, Offer, Rejected) and Open apply link button; status persists. Partly delivers 55, 61-62.",Highest,prototype,8
+91,Story,Extension sign-in,AC: user signs in with their JobPilot (Supabase) session; extension can only read that user's tasks.,High,extension,9
+92,Story,Poll and claim submission tasks,AC: extension claims approved tasks from the queue while the browser is open; respects daily cap and per-site throttle; retries failed tasks with a limit.,High,extension,9
+93,Story,ATS field adapters,"AC: field mapping for Greenhouse, Lever and Ashby forms; unknown forms go to Needs you instead of guessing.",High,extension,9
+94,Story,Classify forms on the page,"AC: on non-Greenhouse sites, detect screening questions, surveys, assessments, account sign-up or CAPTCHA and route the job to Needs you. Never solves a CAPTCHA.",High,extension,9
+95,Story,Upload confirmation screenshot,AC: compressed screenshot after submit uploaded to Storage and linked in the audit log; kept 30 days.,Medium,extension,9
+96,Story,Distribute the extension,AC: sideload for testing and publish on Firefox Add-ons (free); Chrome Web Store ($5 one-time) when outside users join.,Medium,extension,9
