@@ -52,3 +52,22 @@ jobs:
           name: playwright-traces
           path: test-results/
           retention-days: 7
+
+  db:
+    name: Database security tests (Supabase RLS)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 3.1.0
+      # Local Supabase in Docker on the runner; Studio isn't needed for tests.
+      - run: supabase start -x studio
+      # Resets the local database from supabase/migrations, then runs the RLS tests.
+      - run: npm run test:db
