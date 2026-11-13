@@ -79,12 +79,19 @@ describe("jobs", () => {
 
   it("lists newest first, filters by status, and deletes", () => {
     const a = addJob(db, sample);
-    const b = addJob(db, { ...sample, company: "Globex" });
+    const b = addJob(db, { ...sample, company: "Globex", applyUrl: "https://jobs.lever.co/globex/2" });
     updateJob(db, a.id, { status: "Applied" });
     expect(listJobs(db).map((j) => j.id)).toEqual([b.id, a.id]);
     expect(listJobs(db, { status: "Applied" }).map((j) => j.id)).toEqual([a.id]);
     expect(deleteJob(db, a.id)).toBe(true);
     expect(getJob(db, a.id)).toBeNull();
+  });
+});
+
+describe("unique apply link (migration v2)", () => {
+  it("refuses a second job with the same link", () => {
+    addJob(db, sample);
+    expect(() => addJob(db, { ...sample, company: "Other" })).toThrow(/UNIQUE/);
   });
 });
 
@@ -99,6 +106,29 @@ describe("file database", () => {
       const second = openDb(file); // migrations must not re-run
       expect(getJob(second, id)?.company).toBe("Acme");
       second.close();
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("upgrades a v1 database to v2 without losing data", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "jobpilot-"));
+    const file = path.join(dir, "v1.db");
+    try {
+      // Simulate a database created before task 84: no unique index, user_version 1.
+      const old = openDb(file);
+      old.exec("DROP INDEX jobs_apply_url_uq");
+      old.pragma("user_version = 1");
+      saveProfile(old, "my resume");
+      const { id } = addJob(old, sample);
+      old.close();
+
+      const upgraded = openDb(file);
+      expect(upgraded.pragma("user_version", { simple: true })).toBe(2);
+      expect(getProfile(upgraded)?.resumeText).toBe("my resume");
+      expect(getJob(upgraded, id)?.company).toBe("Acme");
+      expect(() => addJob(upgraded, sample)).toThrow(/UNIQUE/);
+      upgraded.close();
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
     }
