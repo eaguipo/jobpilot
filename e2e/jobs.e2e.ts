@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { evidence } from "./evidence";
 
 /**
  * Task 84: Add job form.
@@ -90,6 +91,7 @@ test("adds a job and shows it in the list (done-when)", async ({ page }) => {
 
   await card.getByText("Job description").click();
   await expect(card.getByText("Experience with Next.js & <Tailwind CSS>")).toBeVisible();
+  await evidence(page.getByRole("region", { name: /your jobs/i }), "84-job-added-to-list");
 });
 
 test("keeps jobs after a reload and lists the newest first", async ({ page }) => {
