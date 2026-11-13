@@ -78,7 +78,9 @@ test("shows a friendly error when the model is busy and saves no score", async (
   );
   const cyberdyne = card(page, "Cyberdyne");
   await cyberdyne.getByRole("button", { name: "Score match" }).click();
-  await expect(cyberdyne.getByRole("status")).toHaveText("Gemini is busy right now. Try again in a minute.");
+  await expect(cyberdyne.getByRole("form", { name: "Score match" }).getByRole("status")).toHaveText(
+    "Gemini is busy right now. Try again in a minute.",
+  );
   await expect(cyberdyne.getByTestId("match-panel")).toHaveCount(0);
   await page.reload();
   await expect(card(page, "Cyberdyne").getByTestId("match-panel")).toHaveCount(0);

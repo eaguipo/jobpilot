@@ -2,22 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { getDb, getJob, getProfile, updateJob } from "@/lib/db";
-import { getLlm, LlmError, type LlmErrorKind } from "@/lib/llm";
-import { fakeGenerate, scoreMatch } from "@/lib/match";
+import { getGenerator, llmErrorMessage } from "@/lib/ai";
+import { LlmError } from "@/lib/llm";
+import { scoreMatch } from "@/lib/match";
+import type { ActionState } from "./job-action-button";
 
-export type ScoreState = { status: "idle" } | { status: "scored"; score: number } | { status: "error"; error: string };
-
-const MESSAGES: Record<LlmErrorKind, string> = {
-  config: "No Gemini API key. Add GEMINI_API_KEY to .env.local and restart the app.",
-  auth: "Gemini rejected the API key. Check GEMINI_API_KEY in .env.local.",
-  rate_limit: "Gemini's free-tier limit was reached. Wait a minute and try again.",
-  unavailable: "Gemini is busy right now. Try again in a minute.",
-  blocked: "Gemini declined to score this job.",
-  bad_response: "Gemini didn't return a usable score. Try again.",
-  network: "Couldn't reach Gemini. Check your connection and try again.",
-};
-
-export async function scoreJobAction(_prev: ScoreState, formData: FormData): Promise<ScoreState> {
+export async function scoreJobAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const jobId = Number(formData.get("jobId"));
   const db = getDb();
   const job = Number.isInteger(jobId) ? getJob(db, jobId) : null;
@@ -26,16 +16,16 @@ export async function scoreJobAction(_prev: ScoreState, formData: FormData): Pro
   if (!profile) return { status: "error", error: "Add your resume on the Profile page first." };
 
   try {
-    const generate = process.env.JOBPILOT_FAKE_LLM === "1" ? fakeGenerate : getLlm();
+    const generate = getGenerator();
     const result = await scoreMatch({ resume: profile.resumeText, job }, generate);
     updateJob(db, job.id, result);
     revalidatePath("/jobs");
-    return { status: "scored", score: result.score };
+    return { status: "done" };
   } catch (e) {
     if (e instanceof LlmError) {
       // Log the kind and our own message only: never the key, resume or job text.
       console.error(`[score] job ${job.id}: ${e.kind}: ${e.message}`);
-      return { status: "error", error: MESSAGES[e.kind] };
+      return { status: "error", error: llmErrorMessage(e.kind, "score this job") };
     }
     throw e;
   }

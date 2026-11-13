@@ -1,6 +1,6 @@
 /** Match score: how well the master resume fits a job (task 85). */
 
-import { LlmError, type GenerateJson } from "./llm";
+import { fence, LlmError, type GenerateJson } from "./llm";
 
 export interface MatchResult {
   /** 0-100 */
@@ -48,12 +48,6 @@ Output:
 - "gaps": requirements the resume does not show, each a short phrase, e.g. "GraphQL". At most ${MAX_ITEMS}, most important first.
 - Never list the same requirement in both.`;
 
-/** Stops pasted text from closing our delimiter tags early. */
-function fence(text: string, tag: string) {
-  const safe = text.replace(new RegExp(`</?${tag}`, "gi"), (m) => m.replace("<", "‹"));
-  return `<${tag}>\n${safe}\n</${tag}>`;
-}
-
 export function buildMatchPrompt({ resume, job }: MatchInput): string {
   return [
     fence(resume, "resume"),
@@ -97,20 +91,3 @@ export async function scoreMatch(input: MatchInput, generate: GenerateJson): Pro
   const raw = await generate({ system: MATCH_SYSTEM_PROMPT, prompt: buildMatchPrompt(input), schema: MATCH_SCHEMA });
   return parseMatchResult(raw);
 }
-
-// ---- offline fake, used by the e2e tests (JOBPILOT_FAKE_LLM=1) ----
-
-const FAKE_SKILLS = ["React", "TypeScript", "Next.js", "Node.js", "GraphQL", "Python", "AWS", "Docker", "Kubernetes", "SQL", "Tailwind"];
-
-/** Deterministic stand-in for Gemini: keyword overlap. Lets tests run free and offline. */
-export const fakeGenerate: GenerateJson = async ({ prompt }) => {
-  const resume = /<resume>([\s\S]*?)<\/resume>/.exec(prompt)?.[1] ?? "";
-  const posting = /<job_posting>([\s\S]*?)<\/job_posting>/.exec(prompt)?.[1] ?? "";
-  if (posting.includes("FAKE_LLM_UNAVAILABLE")) throw new LlmError("unavailable", "Fake Gemini is busy.");
-  const has = (text: string, skill: string) => new RegExp(`\\b${skill.replace(/[.+]/g, "\\$&")}\\b`, "i").test(text);
-  const wanted = FAKE_SKILLS.filter((s) => has(posting, s));
-  const met = wanted.filter((s) => has(resume, s)).map((s) => `${s} — on your resume`);
-  const gaps = wanted.filter((s) => !has(resume, s));
-  const score = wanted.length ? Math.round((100 * met.length) / wanted.length) : 50;
-  return { score, met, gaps };
-};

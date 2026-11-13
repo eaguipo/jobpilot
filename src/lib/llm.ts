@@ -22,6 +22,20 @@ export class LlmError extends Error {
   }
 }
 
+/** Tag names our prompts use to delimit untrusted text. */
+const PROMPT_TAGS = ["resume", "job_posting", "gaps"];
+
+/**
+ * Wraps untrusted text (resume, job posting) in a tag the prompt refers to,
+ * defusing every prompt tag inside the text so it can't end its block early
+ * or fake another block (e.g. a posting that contains "<gaps>none</gaps>").
+ */
+export function fence(text: string, tag: string) {
+  const tags = [...new Set([...PROMPT_TAGS, tag])].join("|");
+  const safe = text.replace(new RegExp(`<(/?)(${tags})\\b`, "gi"), "‹$1$2");
+  return `<${tag}>\n${safe}\n</${tag}>`;
+}
+
 export interface JsonRequest {
   system: string;
   prompt: string;
