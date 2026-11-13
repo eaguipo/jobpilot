@@ -84,6 +84,10 @@ test("adds a job and shows it in the list (done-when)", async ({ page }) => {
   await expect(link).toHaveAttribute("target", "_blank");
   await expect(link).toHaveAttribute("rel", /noopener/);
 
+  // No resume saved yet in this run, so scoring points to the Profile page.
+  await expect(card.getByRole("link", { name: "Add your resume" })).toHaveAttribute("href", "/profile");
+  await expect(card.getByRole("button", { name: "Score match" })).toHaveCount(0);
+
   await card.getByText("Job description").click();
   await expect(card.getByText("Experience with Next.js & <Tailwind CSS>")).toBeVisible();
 });
