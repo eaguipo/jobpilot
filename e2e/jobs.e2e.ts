@@ -32,7 +32,7 @@ async function fillJob(page: Page, job: Partial<typeof JOB>) {
 }
 const addButton = (page: Page) => page.getByRole("button", { name: /add job|adding/i });
 const cards = (page: Page) => page.getByTestId("job-card");
-const status = (page: Page) => page.getByRole("status");
+const status = (page: Page) => page.getByRole("form", { name: "Add a job" }).getByRole("status");
 
 test("header links to the Jobs page, which starts empty", async ({ page }) => {
   await page.goto("/");
@@ -77,9 +77,9 @@ test("adds a job and shows it in the list (done-when)", async ({ page }) => {
   const card = cards(page).first();
   await expect(card.getByRole("heading", { name: JOB.title })).toBeVisible();
   await expect(card.getByText(JOB.company)).toBeVisible();
-  await expect(card.getByText("Matched")).toBeVisible();
+  await expect(card.getByLabel("Status", { exact: true })).toHaveValue("Matched");
 
-  const link = card.getByRole("link", { name: /open posting/i });
+  const link = card.getByRole("link", { name: /open apply link/i });
   await expect(link).toHaveAttribute("href", JOB.applyUrl);
   await expect(link).toHaveAttribute("target", "_blank");
   await expect(link).toHaveAttribute("rel", /noopener/);

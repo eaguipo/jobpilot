@@ -30,7 +30,7 @@ async function addJob(page: Page, company: string, url: string, description: str
   await page.getByLabel("Apply link").fill(url);
   await page.getByLabel("Job description", { exact: true }).fill(description);
   await page.getByRole("button", { name: "Add job" }).click();
-  await expect(page.getByRole("status").first()).toContainText(`Added Senior Frontend Engineer at ${company}.`);
+  await expect(page.getByRole("form", { name: "Add a job" }).getByRole("status")).toContainText(`Added Senior Frontend Engineer at ${company}.`);
 }
 
 const card = (page: Page, company: string) => page.getByTestId("job-card").filter({ hasText: company });
