@@ -25,7 +25,13 @@ export default defineConfig({
   webServer: {
     command: `rm -rf .e2e && next build && next start -p ${PORT}`,
     url: `http://localhost:${PORT}`,
-    env: { JOBPILOT_DB: ".e2e/jobpilot.db", NEXT_DIST_DIR: ".next-e2e" },
+    env: {
+      JOBPILOT_DB: ".e2e/jobpilot.db",
+      NEXT_DIST_DIR: ".next-e2e",
+      // Offline fake model: tests never call Gemini or spend your quota.
+      JOBPILOT_FAKE_LLM: "1",
+      GEMINI_API_KEY: "",
+    },
     reuseExistingServer: false,
     timeout: 180_000,
   },

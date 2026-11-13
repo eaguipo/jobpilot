@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
-import { getDb, listJobs } from "@/lib/db";
+import Link from "next/link";
+import { getDb, getProfile, listJobs } from "@/lib/db";
 import { AddJobForm } from "./add-job-form";
+import { MatchPanel } from "./match-panel";
+import { ScoreButton } from "./score-button";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Jobs · JobPilot" };
@@ -10,12 +13,14 @@ function formatDate(iso: string) {
 }
 
 export default function JobsPage() {
-  const jobs = listJobs(getDb());
+  const db = getDb();
+  const jobs = listJobs(db);
+  const hasResume = getProfile(db) !== null;
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-8">
       <h1 className="text-2xl font-semibold">Jobs</h1>
       <p className="mt-1 mb-6 text-sm text-black/60 dark:text-white/60">
-        Add a job you found. Match scores and tailored documents come in the next steps.
+        Add a job you found, then score how well your resume matches it. Tailored documents come next.
       </p>
 
       <section aria-labelledby="add-job" className="rounded-xl border border-black/10 p-4 dark:border-white/15">
@@ -47,6 +52,16 @@ export default function JobsPage() {
                     Open posting ↗
                   </a>
                   <span className="text-black/50 dark:text-white/50">Added {formatDate(job.createdAt)}</span>
+                </div>
+                {job.score !== null && <MatchPanel job={{ ...job, score: job.score }} />}
+                <div className="mt-3">
+                  {hasResume ? (
+                    <ScoreButton jobId={job.id} scored={job.score !== null} />
+                  ) : (
+                    <p className="text-xs text-black/60 dark:text-white/60">
+                      <Link href="/profile" className="text-blue-700 underline dark:text-blue-300">Add your resume</Link> to score this job.
+                    </p>
+                  )}
                 </div>
                 <details className="mt-2 text-sm">
                   <summary className="cursor-pointer text-black/60 dark:text-white/60">Job description</summary>
