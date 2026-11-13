@@ -33,6 +33,9 @@ export default function RootLayout({
             <Link href="/" className="font-semibold">
               JobPilot
             </Link>
+            <Link href="/jobs" className="text-black/70 hover:text-black dark:text-white/70 dark:hover:text-white">
+              Jobs
+            </Link>
             <Link href="/profile" className="text-black/70 hover:text-black dark:text-white/70 dark:hover:text-white">
               Profile
             </Link>

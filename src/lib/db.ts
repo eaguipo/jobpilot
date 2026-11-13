@@ -66,6 +66,8 @@ const MIGRATIONS: string[] = [
   );
   CREATE INDEX jobs_status_idx ON jobs (status);
   `,
+  // v2 (task 84): one job per posting link.
+  `CREATE UNIQUE INDEX jobs_apply_url_uq ON jobs (apply_url);`,
 ];
 
 /** Opens (and migrates) a database. Pass ":memory:" in tests. */
@@ -168,6 +170,11 @@ export function addJob(db: Db, job: NewJob): Job {
 
 export function getJob(db: Db, id: number): Job | null {
   const row = db.prepare(`SELECT * FROM jobs WHERE id = ?`).get(id) as JobRow | undefined;
+  return row ? toJob(row) : null;
+}
+
+export function findJobByApplyUrl(db: Db, applyUrl: string): Job | null {
+  const row = db.prepare(`SELECT * FROM jobs WHERE apply_url = ?`).get(applyUrl) as JobRow | undefined;
   return row ? toJob(row) : null;
 }
 
