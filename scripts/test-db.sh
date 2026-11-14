@@ -33,4 +33,5 @@ if [ "$ok" -lt 3 ]; then
   echo "Local Supabase didn't become ready after the reset (auth=$auth api=$rest)." >&2
   exit 1
 fi
-SUPABASE_DB_TEST=1 ./node_modules/.bin/vitest run .db.test "$@"
+# Files share one database (and one queue), so run them one at a time.
+SUPABASE_DB_TEST=1 ./node_modules/.bin/vitest run .db.test --no-file-parallelism "$@"
