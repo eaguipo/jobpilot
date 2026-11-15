@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { requireUser } from "@/lib/supabase/server";
 import Link from "next/link";
 import { countJobsByStatus, getDb, getProfile, isJobStatus, JOB_STATUSES, listJobs, listStatusEventsByJob, type StatusEvent } from "@/lib/db";
 import { AddJobForm } from "./add-job-form";
@@ -36,6 +37,7 @@ function StatusHistory({ events }: { events: StatusEvent[] }) {
 }
 
 export default async function JobsPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
+  await requireUser("/jobs");
   const { status: statusParam } = await searchParams;
   const filter = isJobStatus(statusParam) ? statusParam : undefined;
   const db = getDb();
