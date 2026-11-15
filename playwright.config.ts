@@ -4,8 +4,8 @@ import { defineConfig, devices } from "@playwright/test";
  * End-to-end tests: a real browser against a production build of the app.
  * Run with `npm run test:e2e` (scripts/test-e2e.sh), which points the build at the
  * LOCAL Supabase from `supabase start`.
- * - Uses its own database (.e2e/jobpilot.db), wiped on every run, so your real
- *   data/jobpilot.db is never touched.
+ * - Data lives in the local Supabase; the setup step recreates the test user (and so
+ *   wipes its data) on every run.
  * - Builds into .next-e2e so it doesn't clash with a running `npm run dev`.
  * - A "setup" step signs in a test user first; the other tests reuse that session.
  */
@@ -42,7 +42,6 @@ export default defineConfig({
     command: `rm -rf .e2e && next build && next start -p ${PORT}`,
     url: `http://localhost:${PORT}`,
     env: {
-      JOBPILOT_DB: ".e2e/jobpilot.db",
       NEXT_DIST_DIR: ".next-e2e",
       // Offline fake model: tests never call Gemini or spend your quota.
       JOBPILOT_FAKE_LLM: "1",

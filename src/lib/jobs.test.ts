@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { addJob, findJobByApplyUrl, openDb } from "./db";
 import { checkNewJob, LIMITS, normaliseApplyUrl } from "./jobs";
 
 const valid = {
@@ -66,17 +65,5 @@ describe("checkNewJob", () => {
         description: expect.stringMatching(/too short/),
       },
     });
-  });
-});
-
-describe("findJobByApplyUrl", () => {
-  it("finds an existing job by its link, for duplicate checks", () => {
-    const db = openDb(":memory:");
-    const check = checkNewJob(valid);
-    if (!check.ok) throw new Error("expected valid");
-    const job = addJob(db, check.job);
-    expect(findJobByApplyUrl(db, "https://boards.greenhouse.io/acme/jobs/123")?.id).toBe(job.id);
-    expect(findJobByApplyUrl(db, "https://boards.greenhouse.io/acme/jobs/999")).toBeNull();
-    db.close();
   });
 });

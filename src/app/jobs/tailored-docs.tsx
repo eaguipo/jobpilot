@@ -1,4 +1,4 @@
-import type { Job } from "@/lib/db";
+import type { Job } from "@/lib/data";
 import { factCheck, type Flag } from "@/lib/fact-check";
 import { CopyButton } from "./copy-button";
 

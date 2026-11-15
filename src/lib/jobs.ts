@@ -1,6 +1,6 @@
 /** Validation for the Add job form (task 84). Pure, so it is easy to test. */
 
-import type { NewJob } from "./db";
+import type { NewJob } from "./data";
 
 export const LIMITS = {
   company: 200,
