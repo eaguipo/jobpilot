@@ -14,7 +14,8 @@
     "test:e2e:ui": "playwright test --ui",
     "test:live": "GEMINI_LIVE=1 node --env-file-if-exists=.env.local ./node_modules/vitest/vitest.mjs run .live.test",
     "test:db": "./scripts/test-db.sh",
-    "test:e2e:evidence": "EVIDENCE_DIR=docs/evidence playwright test"
+    "test:e2e:evidence": "EVIDENCE_DIR=docs/evidence playwright test",
+    "worker": "tsx src/worker/main.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.119.0",
@@ -34,6 +35,7 @@
     "eslint": "^9",
     "eslint-config-next": "15.5.29",
     "tailwindcss": "^4",
+    "tsx": "^4.23.15",
     "typescript": "^5",
     "vitest": "^5.1.0"
   },
