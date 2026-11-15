@@ -43,7 +43,12 @@ jobs:
       - run: npm ci
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
-      # Builds the app and runs it with a throwaway database and the offline fake model.
+      # Sign-in tests need Supabase Auth: a throwaway local stack on the runner.
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 3.1.0
+      - run: supabase start -x studio
+      # Builds the app against the local Supabase, with a throwaway database and the offline fake model.
       - run: npm run test:e2e
       - name: Upload traces on failure
         if: failure()

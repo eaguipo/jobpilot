@@ -1,5 +1,6 @@
 "use server";
 
+import { requireUser } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { addJob, findJobByApplyUrl, getDb } from "@/lib/db";
 import { checkNewJob, type JobField } from "@/lib/jobs";
@@ -12,6 +13,7 @@ export type AddJobState =
   | { status: "error"; errors: Partial<Record<JobField, string>>; values: Values };
 
 export async function addJobAction(_prev: AddJobState, formData: FormData): Promise<AddJobState> {
+  await requireUser(); // pages are guarded by middleware; actions check again
   const values: Values = {
     company: String(formData.get("company") ?? ""),
     title: String(formData.get("title") ?? ""),

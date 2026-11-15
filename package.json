@@ -10,14 +10,15 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui",
+    "test:e2e": "./scripts/test-e2e.sh",
+    "test:e2e:ui": "./scripts/test-e2e.sh --ui",
     "test:live": "GEMINI_LIVE=1 node --env-file-if-exists=.env.local ./node_modules/vitest/vitest.mjs run .live.test",
     "test:db": "./scripts/test-db.sh",
-    "test:e2e:evidence": "EVIDENCE_DIR=docs/evidence playwright test",
+    "test:e2e:evidence": "EVIDENCE_DIR=docs/evidence ./scripts/test-e2e.sh",
     "worker": "tsx src/worker/main.ts"
   },
   "dependencies": {
+    "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.119.0",
     "better-sqlite3": "^13.1.1",
     "next": "15.5.29",

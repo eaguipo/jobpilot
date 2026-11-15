@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
+import { requireUser } from "@/lib/supabase/server";
 import { getDb, getProfile } from "@/lib/db";
 import { ProfileForm } from "./profile-form";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Profile · JobPilot" };
 
-export default function ProfilePage() {
+export default async function ProfilePage() {
+  await requireUser("/profile");
   const profile = getProfile(getDb());
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-8">

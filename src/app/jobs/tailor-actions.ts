@@ -1,5 +1,6 @@
 "use server";
 
+import { requireUser } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { getGenerator, llmErrorMessage } from "@/lib/ai";
 import { getDb, getJob, getProfile, updateJob } from "@/lib/db";
@@ -8,6 +9,7 @@ import { tailor } from "@/lib/tailor";
 import type { ActionState } from "./job-action-button";
 
 export async function tailorJobAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  await requireUser(); // pages are guarded by middleware; actions check again
   const jobId = Number(formData.get("jobId"));
   const db = getDb();
   const job = Number.isInteger(jobId) ? getJob(db, jobId) : null;

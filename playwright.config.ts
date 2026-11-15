@@ -2,15 +2,23 @@ import { defineConfig, devices } from "@playwright/test";
 
 /**
  * End-to-end tests: a real browser against a production build of the app.
+ * Run with `npm run test:e2e` (scripts/test-e2e.sh), which points the build at the
+ * LOCAL Supabase from `supabase start`.
  * - Uses its own database (.e2e/jobpilot.db), wiped on every run, so your real
  *   data/jobpilot.db is never touched.
  * - Builds into .next-e2e so it doesn't clash with a running `npm run dev`.
+ * - A "setup" step signs in a test user first; the other tests reuse that session.
  */
 const PORT = 3200;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+if (!/^http:\/\/(127\.0\.0\.1|localhost):\d+\/?$/.test(supabaseUrl)) {
+  throw new Error(
+    `Browser tests must use the local Supabase, got "${supabaseUrl || "nothing"}". Run them with: npm run test:e2e`,
+  );
+}
 
 export default defineConfig({
   testDir: "e2e",
-  testMatch: "**/*.e2e.ts",
   // Tests share one database (a single profile row), so run them one at a time.
   fullyParallel: false,
   workers: 1,
@@ -21,7 +29,15 @@ export default defineConfig({
     baseURL: `http://localhost:${PORT}`,
     trace: "retain-on-failure",
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    { name: "setup", testMatch: /auth\.setup\.ts/ },
+    {
+      name: "chromium",
+      testMatch: "**/*.e2e.ts",
+      dependencies: ["setup"],
+      use: { ...devices["Desktop Chrome"], storageState: ".e2e/auth.json" },
+    },
+  ],
   webServer: {
     command: `rm -rf .e2e && next build && next start -p ${PORT}`,
     url: `http://localhost:${PORT}`,
