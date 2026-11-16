@@ -55,3 +55,4 @@ Issue Id,Issue Type,Summary,Description,Priority,Labels,Parent Id
 94,Story,Classify forms on the page,"AC: on non-Greenhouse sites, detect screening questions, surveys, assessments, account sign-up or CAPTCHA and route the job to Needs you. Never solves a CAPTCHA.",High,extension,9
 95,Story,Upload confirmation screenshot,AC: compressed screenshot after submit uploaded to Storage and linked in the audit log; kept 30 days.,Medium,extension,9
 96,Story,Distribute the extension,AC: sideload for testing and publish on Firefox Add-ons (free); Chrome Web Store ($5 one-time) when outside users join.,Medium,extension,9
+77,Task,Deploy to Vercel,"Deploy the Next.js app to Vercel Hobby from main (auto-deploy on push, preview per PR). Env: NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY, GEMINI_API_KEY (no secret key). Supabase Auth Site URL and redirect URLs set to the Vercel domain. Live: https://jobpilot-ruby.vercel.app",Medium,platform,7
