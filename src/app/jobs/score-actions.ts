@@ -6,6 +6,7 @@ import { getJob, getProfile, updateJob } from "@/lib/data";
 import { getGenerator, llmErrorMessage } from "@/lib/ai";
 import { LlmError } from "@/lib/llm";
 import { scoreMatch } from "@/lib/match";
+import { quotaMessage, takeAiQuota } from "@/lib/quota";
 import type { ActionState } from "./job-action-button";
 
 export async function scoreJobAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
@@ -16,6 +17,9 @@ export async function scoreJobAction(_prev: ActionState, formData: FormData): Pr
   if (!job) return { status: "error", error: "That job no longer exists." };
   const profile = await getProfile(db);
   if (!profile) return { status: "error", error: "Add your resume on the Profile page first." };
+  // Everyone shares the app's Gemini key: check this user's daily and per-minute limits first.
+  const quota = await takeAiQuota(db, "score");
+  if (!quota.allowed) return { status: "error", error: quotaMessage(quota) };
 
   try {
     const generate = getGenerator();
