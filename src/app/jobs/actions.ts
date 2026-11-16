@@ -1,8 +1,8 @@
 "use server";
 
-import { requireUser } from "@/lib/supabase/server";
+import { createSupabaseServer, requireUser } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import { addJob, findJobByApplyUrl, getDb } from "@/lib/db";
+import { addJob, DataError, findJobByApplyUrl } from "@/lib/data";
 import { checkNewJob, type JobField } from "@/lib/jobs";
 
 type Values = Record<JobField, string>;
@@ -23,8 +23,8 @@ export async function addJobAction(_prev: AddJobState, formData: FormData): Prom
   const check = checkNewJob(values);
   if (!check.ok) return { status: "error", errors: check.errors, values };
 
-  const db = getDb();
-  const existing = findJobByApplyUrl(db, check.job.applyUrl);
+  const db = await createSupabaseServer();
+  const existing = await findJobByApplyUrl(db, check.job.applyUrl);
   if (existing) {
     return {
       status: "error",
@@ -35,10 +35,10 @@ export async function addJobAction(_prev: AddJobState, formData: FormData): Prom
 
   let job;
   try {
-    job = addJob(db, check.job);
+    job = await addJob(db, check.job);
   } catch (e) {
     // Same link added at the same moment (e.g. double submit): the unique index wins.
-    if ((e as { code?: string }).code === "SQLITE_CONSTRAINT_UNIQUE") {
+    if (e instanceof DataError && e.code === "23505") {
       return { status: "error", errors: { applyUrl: "This job was already added." }, values };
     }
     throw e;

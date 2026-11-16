@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import { requireUser } from "@/lib/supabase/server";
+import { createSupabaseServer, requireUser } from "@/lib/supabase/server";
 import Link from "next/link";
-import { countJobsByStatus, getDb, getProfile, isJobStatus, JOB_STATUSES, listJobs, listStatusEventsByJob, type StatusEvent } from "@/lib/db";
+import { countJobsByStatus, getProfile, isJobStatus, JOB_STATUSES, listJobs, listStatusEventsByJob, type StatusEvent } from "@/lib/data";
 import { AddJobForm } from "./add-job-form";
 import { MatchPanel } from "./match-panel";
 import { JobActionButton } from "./job-action-button";
@@ -40,12 +40,15 @@ export default async function JobsPage({ searchParams }: { searchParams: Promise
   await requireUser("/jobs");
   const { status: statusParam } = await searchParams;
   const filter = isJobStatus(statusParam) ? statusParam : undefined;
-  const db = getDb();
-  const jobs = listJobs(db, { status: filter });
-  const counts = countJobsByStatus(db);
+  const db = await createSupabaseServer();
+  // Independent reads, in parallel; RLS returns only this user's rows.
+  const [jobs, counts, history, profile] = await Promise.all([
+    listJobs(db, { status: filter }),
+    countJobsByStatus(db),
+    listStatusEventsByJob(db),
+    getProfile(db),
+  ]);
   const total = Object.values(counts).reduce((a, b) => a + b, 0);
-  const history = listStatusEventsByJob(db);
-  const profile = getProfile(db);
   const chip = (active: boolean) =>
     `rounded-full border px-3 py-1 text-xs font-medium ${
       active

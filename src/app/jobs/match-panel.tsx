@@ -1,4 +1,4 @@
-import type { Job } from "@/lib/db";
+import type { Job } from "@/lib/data";
 
 function tone(score: number) {
   if (score >= 75) return { bar: "bg-green-600", text: "text-green-700 dark:text-green-400", label: "Strong match" };
