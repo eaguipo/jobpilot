@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { createSupabaseServer, requireUser } from "@/lib/supabase/server";
 import Link from "next/link";
 import { countJobsByStatus, getProfile, isJobStatus, JOB_STATUSES, listJobs, listStatusEventsByJob, type StatusEvent } from "@/lib/data";
+import { getAiQuota } from "@/lib/quota";
 import { AddJobForm } from "./add-job-form";
 import { MatchPanel } from "./match-panel";
 import { JobActionButton } from "./job-action-button";
@@ -42,12 +43,14 @@ export default async function JobsPage({ searchParams }: { searchParams: Promise
   const filter = isJobStatus(statusParam) ? statusParam : undefined;
   const db = await createSupabaseServer();
   // Independent reads, in parallel; RLS returns only this user's rows.
-  const [jobs, counts, history, profile] = await Promise.all([
+  const [jobs, counts, history, profile, quota] = await Promise.all([
     listJobs(db, { status: filter }),
     countJobsByStatus(db),
     listStatusEventsByJob(db),
     getProfile(db),
+    getAiQuota(db),
   ]);
+  const runsLeft = Math.max(0, quota.perDay - quota.usedToday);
   const total = Object.values(counts).reduce((a, b) => a + b, 0);
   const chip = (active: boolean) =>
     `rounded-full border px-3 py-1 text-xs font-medium ${
@@ -60,6 +63,9 @@ export default async function JobsPage({ searchParams }: { searchParams: Promise
       <h1 className="text-2xl font-semibold">Jobs</h1>
       <p className="mt-1 mb-6 text-sm text-black/60 dark:text-white/60">
         Add a job, score how well your resume matches it, get a tailored resume and cover letter, then track where each application stands.
+      </p>
+      <p data-testid="ai-quota" className="-mt-4 mb-6 text-xs text-black/50 dark:text-white/50">
+        AI runs left today: {runsLeft} of {quota.perDay} (scoring and tailoring each use one; resets at midnight UTC).
       </p>
 
       <section aria-labelledby="add-job" className="rounded-xl border border-black/10 p-4 dark:border-white/15">

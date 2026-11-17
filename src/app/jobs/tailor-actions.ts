@@ -6,6 +6,7 @@ import { getGenerator, llmErrorMessage } from "@/lib/ai";
 import { getJob, getProfile, updateJob } from "@/lib/data";
 import { LlmError } from "@/lib/llm";
 import { tailor } from "@/lib/tailor";
+import { quotaMessage, takeAiQuota } from "@/lib/quota";
 import type { ActionState } from "./job-action-button";
 
 export async function tailorJobAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
@@ -16,6 +17,9 @@ export async function tailorJobAction(_prev: ActionState, formData: FormData): P
   if (!job) return { status: "error", error: "That job no longer exists." };
   const profile = await getProfile(db);
   if (!profile) return { status: "error", error: "Add your resume on the Profile page first." };
+  // Everyone shares the app's Gemini key: check this user's daily and per-minute limits first.
+  const quota = await takeAiQuota(db, "tailor");
+  if (!quota.allowed) return { status: "error", error: quotaMessage(quota) };
 
   try {
     const result = await tailor({ resume: profile.resumeText, job, gaps: job.gaps }, getGenerator());
