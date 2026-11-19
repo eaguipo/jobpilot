@@ -233,3 +233,84 @@ export async function listStatusEventsByJob(sb: SupabaseClient): Promise<Map<num
   }
   return byJob;
 }
+
+// ---- audit log (task 75) ----
+// Written only by a database trigger when a score or document is generated;
+// users can read their own entries and change nothing (see the migration).
+
+export const AUDIT_KINDS = ["match_scored", "resume_tailored", "cover_letter_written", "application_submitted"] as const;
+export type AuditKind = (typeof AUDIT_KINDS)[number];
+
+export interface AuditEntry {
+  id: number;
+  /** null once the job has been deleted; jobCompany/jobTitle still say what it was. */
+  jobId: number | null;
+  kind: AuditKind;
+  jobCompany: string;
+  jobTitle: string;
+  /** e.g. { score, met, gaps } for match_scored. */
+  detail: Record<string, unknown>;
+  /** Storage path of the submission screenshot (story 95). */
+  screenshotPath: string | null;
+  createdAt: string;
+}
+
+/** An entry with the full generated document text (only fetched one at a time). */
+export interface AuditEntryWithDocument extends AuditEntry {
+  document: string | null;
+}
+
+// The list leaves out `document` (several KB each); getAuditEntry loads it on demand.
+const AUDIT_COLUMNS = "id, job_id, kind, job_company, job_title, detail, screenshot_path, created_at";
+
+interface AuditRow {
+  id: number;
+  job_id: number | null;
+  kind: AuditKind;
+  job_company: string;
+  job_title: string;
+  detail: Record<string, unknown> | null;
+  screenshot_path: string | null;
+  created_at: string;
+  document?: string | null;
+}
+
+const toAuditEntry = (r: AuditRow): AuditEntry => ({
+  id: r.id,
+  jobId: r.job_id,
+  kind: r.kind,
+  jobCompany: r.job_company,
+  jobTitle: r.job_title,
+  detail: r.detail ?? {},
+  screenshotPath: r.screenshot_path,
+  createdAt: r.created_at,
+});
+
+export const AUDIT_PAGE_SIZE = 50;
+
+/**
+ * Newest first, `limit` entries at a time (1-200). Pass the last id you got as
+ * `beforeId` for the next page. Entries are only ever added, so id order is stable.
+ */
+export async function listAuditLog(
+  sb: SupabaseClient,
+  opts: { limit?: number; beforeId?: number } = {},
+): Promise<AuditEntry[]> {
+  const limit = Math.min(Math.max(Math.trunc(opts.limit ?? AUDIT_PAGE_SIZE), 1), 200);
+  let query = sb.from("audit_log").select(AUDIT_COLUMNS).order("id", { ascending: false }).limit(limit);
+  if (opts.beforeId !== undefined) query = query.lt("id", opts.beforeId);
+  const { data, error } = await query.returns<AuditRow[]>();
+  if (error) fail("Loading your activity failed", error);
+  return (data ?? []).map(toAuditEntry);
+}
+
+/** One entry with its document text, or null if it isn't yours or doesn't exist. */
+export async function getAuditEntry(sb: SupabaseClient, id: number): Promise<AuditEntryWithDocument | null> {
+  const { data, error } = await sb
+    .from("audit_log")
+    .select(`${AUDIT_COLUMNS}, document`)
+    .eq("id", id)
+    .maybeSingle<AuditRow>();
+  if (error) fail("Loading the activity entry failed", error);
+  return data ? { ...toAuditEntry(data), document: data.document ?? null } : null;
+}
