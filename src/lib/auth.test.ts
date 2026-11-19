@@ -30,6 +30,8 @@ describe("page guards", () => {
     expect(isProtected("/jobs")).toBe(true);
     expect(isProtected("/jobs/12")).toBe(true);
     expect(isProtected("/profile")).toBe(true);
+    expect(isProtected("/activity")).toBe(true);
+    expect(isProtected("/activity/7")).toBe(true);
     expect(isProtected("/")).toBe(false);
     expect(isProtected("/jobsearch")).toBe(false);
     expect(isAuthPage("/login")).toBe(true);
