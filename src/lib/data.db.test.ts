@@ -6,8 +6,10 @@ import {
   DataError,
   deleteJob,
   findJobByApplyUrl,
+  getAuditEntry,
   getJob,
   getProfile,
+  listAuditLog,
   listJobs,
   listStatusEvents,
   listStatusEventsByJob,
@@ -153,6 +155,50 @@ describe.skipIf(!enabled)("data layer on Supabase", () => {
     });
   });
 
+  describe("audit log", () => {
+    it("lists generated items newest first, without the document text", async () => {
+      const { sb } = await signedIn();
+      const job = await addJob(sb, newJob("Globex"));
+      await updateJob(sb, job.id, { score: 77, met: ["React"], gaps: ["Go"] });
+      await updateJob(sb, job.id, { tailoredResume: "Tailored resume", coverLetter: "Dear Globex" });
+
+      const entries = await listAuditLog(sb);
+      expect(entries.map((e) => e.kind)).toEqual(["cover_letter_written", "resume_tailored", "match_scored"]);
+      expect(entries[2]).toMatchObject({
+        jobId: job.id,
+        jobCompany: "Globex",
+        jobTitle: "Frontend Engineer",
+        detail: { score: 77, met: ["React"], gaps: ["Go"] },
+        screenshotPath: null,
+      });
+      expect(entries[0]).not.toHaveProperty("document");
+    });
+
+    it("pages with limit and beforeId", async () => {
+      const { sb } = await signedIn();
+      const job = await addJob(sb, newJob());
+      for (const score of [10, 20, 30]) await updateJob(sb, job.id, { score });
+
+      const first = await listAuditLog(sb, { limit: 2 });
+      expect(first.map((e) => e.detail.score)).toEqual([30, 20]);
+      const next = await listAuditLog(sb, { limit: 2, beforeId: first[1].id });
+      expect(next.map((e) => e.detail.score)).toEqual([10]);
+      expect(await listAuditLog(sb, { limit: 2, beforeId: next[0].id })).toEqual([]);
+    });
+
+    it("loads one entry with its document; other users get null", async () => {
+      const a = await signedIn();
+      const b = await signedIn();
+      const job = await addJob(a.sb, newJob());
+      await updateJob(a.sb, job.id, { coverLetter: "Dear hiring team" });
+      const [entry] = await listAuditLog(a.sb);
+
+      expect(await getAuditEntry(a.sb, entry.id)).toMatchObject({ kind: "cover_letter_written", document: "Dear hiring team" });
+      expect(await getAuditEntry(b.sb, entry.id)).toBeNull();
+      expect(await getAuditEntry(a.sb, 999_999_999)).toBeNull();
+    });
+  });
+
   describe("users are isolated", () => {
     it("another user can't see, change or delete your jobs, profile or history", async () => {
       const a = await signedIn();
@@ -166,6 +212,7 @@ describe.skipIf(!enabled)("data layer on Supabase", () => {
       expect(await listJobs(b.sb)).toEqual([]);
       expect(await countJobsByStatus(b.sb)).toEqual({ Matched: 0, Applied: 0, Interviewing: 0, Offer: 0, Rejected: 0 });
       expect((await listStatusEventsByJob(b.sb)).size).toBe(0);
+      expect(await listAuditLog(b.sb)).toEqual([]);
 
       expect(await updateJob(b.sb, job.id, { status: "Rejected" })).toBeNull();
       expect(await deleteJob(b.sb, job.id)).toBe(false);

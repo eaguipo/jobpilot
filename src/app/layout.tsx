@@ -42,6 +42,9 @@ export default async function RootLayout({
             <Link href="/profile" className="text-black/70 hover:text-black dark:text-white/70 dark:hover:text-white">
               Profile
             </Link>
+            <Link href="/activity" className="text-black/70 hover:text-black dark:text-white/70 dark:hover:text-white">
+              Activity
+            </Link>
             <div className="ml-auto flex items-center gap-3">
               {user ? (
                 <>

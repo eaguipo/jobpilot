@@ -1,7 +1,7 @@
 /** Pure helpers for sign-in and sign-up (task 72), kept apart so they're easy to test. */
 
 /** Pages that need a signed-in user. */
-export const PROTECTED_PREFIXES = ["/jobs", "/profile"];
+export const PROTECTED_PREFIXES = ["/jobs", "/profile", "/activity"];
 /** Pages only for signed-out visitors. */
 export const AUTH_PAGES = ["/login", "/signup"];
 
