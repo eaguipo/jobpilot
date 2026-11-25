@@ -13,6 +13,7 @@
     "test:e2e": "./scripts/test-e2e.sh",
     "test:e2e:ui": "./scripts/test-e2e.sh --ui",
     "test:live": "GEMINI_LIVE=1 node --env-file-if-exists=.env.local ./node_modules/vitest/vitest.mjs run .live.test",
+    "test:live:boards": "BOARDS_LIVE=1 vitest run job-boards.live",
     "test:db": "./scripts/test-db.sh",
     "test:e2e:evidence": "EVIDENCE_DIR=docs/evidence ./scripts/test-e2e.sh",
     "worker": "tsx src/worker/main.ts"
