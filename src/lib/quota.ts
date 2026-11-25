@@ -7,7 +7,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { DataError } from "./data";
 
-export type AiKind = "score" | "tailor";
+export type AiKind = "score" | "tailor" | "parse";
 
 export interface QuotaResult {
   allowed: boolean;
