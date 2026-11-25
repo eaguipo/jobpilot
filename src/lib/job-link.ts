@@ -74,6 +74,22 @@ function make(board: JobBoard, slug: string | null | undefined, id: string | nul
   return { board, slug: decoded, postingId: id.toLowerCase(), region };
 }
 
+/**
+ * One link per posting, whatever form was pasted (embed, /apply, tracking query),
+ * so the same job is caught as a duplicate.
+ */
+export function canonicalJobUrl(link: JobLink): string {
+  const slug = encodeURIComponent(link.slug);
+  switch (link.board) {
+    case "greenhouse":
+      return `https://job-boards${link.region === "eu" ? ".eu" : ""}.greenhouse.io/${slug}/jobs/${link.postingId}`;
+    case "lever":
+      return `https://jobs${link.region === "eu" ? ".eu" : ""}.lever.co/${slug}/${link.postingId}`;
+    case "ashby":
+      return `https://jobs.ashbyhq.com/${slug}/${link.postingId}`;
+  }
+}
+
 /** Company name guessed from the board slug, for boards whose API doesn't say: "acme-corp" → "Acme Corp". */
 export function companyFromSlug(slug: string): string {
   return slug

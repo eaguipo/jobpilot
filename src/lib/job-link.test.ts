@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { companyFromSlug, parseJobLink } from "./job-link";
+import { canonicalJobUrl, companyFromSlug, parseJobLink } from "./job-link";
 
 const UUID = "5ac21346-8e0c-4494-8e7a-3eb92ff77902";
 
@@ -69,5 +69,18 @@ describe("companyFromSlug", () => {
     expect(companyFromSlug("acme-corp")).toBe("Acme Corp");
     expect(companyFromSlug("open_ai")).toBe("Open Ai");
     expect(companyFromSlug("stripe")).toBe("Stripe");
+  });
+});
+
+describe("canonicalJobUrl", () => {
+  it.each([
+    ["https://boards.greenhouse.io/embed/job_app?for=acme&token=4012345", "https://job-boards.greenhouse.io/acme/jobs/4012345"],
+    ["https://boards.greenhouse.io/acme/jobs/4012345?gh_src=x", "https://job-boards.greenhouse.io/acme/jobs/4012345"],
+    ["https://job-boards.eu.greenhouse.io/acme/jobs/4012345", "https://job-boards.eu.greenhouse.io/acme/jobs/4012345"],
+    [`https://jobs.lever.co/acme/${UUID.toUpperCase()}/apply?lever-source=x`, `https://jobs.lever.co/acme/${UUID}`],
+    [`https://jobs.eu.lever.co/acme/${UUID}`, `https://jobs.eu.lever.co/acme/${UUID}`],
+    [`https://jobs.ashbyhq.com/acme/${UUID}/application`, `https://jobs.ashbyhq.com/acme/${UUID}`],
+  ])("gives %s one canonical link", (input, expected) => {
+    expect(canonicalJobUrl(parseJobLink(input)!)).toBe(expected);
   });
 });
