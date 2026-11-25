@@ -45,6 +45,8 @@ export default defineConfig({
       NEXT_DIST_DIR: ".next-e2e",
       // Offline fake model: tests never call Gemini or spend your quota.
       JOBPILOT_FAKE_LLM: "1",
+      // Offline fake job boards (task 22): tests never call Greenhouse, Lever or Ashby.
+      JOBPILOT_FAKE_BOARDS: "1",
       GEMINI_API_KEY: "",
     },
     reuseExistingServer: false,

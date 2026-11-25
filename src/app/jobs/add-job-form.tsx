@@ -2,15 +2,17 @@
 
 import { useActionState } from "react";
 import { LIMITS, type JobField } from "@/lib/jobs";
+import type { LinkValues } from "@/lib/job-from-link";
 import { addJobAction, type AddJobState } from "./actions";
 
 const input =
   "w-full rounded-lg border border-black/15 bg-transparent px-3 py-2 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 aria-[invalid=true]:border-red-600 dark:border-white/20";
 
-export function AddJobForm() {
+/** `prefill`: values from "Fill from link" (task 22). The parent remounts the form for each new fill. */
+export function AddJobForm({ prefill }: { prefill?: LinkValues } = {}) {
   const [state, action, pending] = useActionState<AddJobState, FormData>(addJobAction, { status: "idle" });
   const errors = state.status === "error" ? state.errors : {};
-  const values = state.status === "error" ? state.values : undefined;
+  const values = state.status === "error" ? state.values : state.status === "added" ? undefined : prefill;
 
   // React resets the form after every submit; remount with the submitted values when there are errors.
   const formKey = state.status === "error" ? JSON.stringify(state.values) : state.status === "added" ? `added-${state.jobId}` : "new";
