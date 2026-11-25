@@ -1,10 +1,16 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { ResumeFileType } from "./resume-file";
 
 /**
  * Where a user's resume file lives in Storage (story 11). The bucket's policies allow
  * exactly these two paths per user, so these helpers are the only valid names.
+ * Safe for the browser: the PDF/DOCX readers live in resume-file.ts (server only).
  */
+export type ResumeFileType = "pdf" | "docx";
+export const RESUME_FILE_MAX_BYTES = 5 * 1024 * 1024;
+export const RESUME_FILE_MIME: Record<ResumeFileType, string> = {
+  pdf: "application/pdf",
+  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+};
 export const RESUME_BUCKET = "resumes";
 export const RESUME_FILE_TYPES: readonly ResumeFileType[] = ["pdf", "docx"];
 

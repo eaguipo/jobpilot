@@ -1,4 +1,5 @@
 import { RESUME_MAX_CHARS } from "./profile";
+import { RESUME_FILE_MAX_BYTES, type ResumeFileType } from "./resume-storage";
 
 /**
  * Reads the text out of an uploaded resume file (story 11). Server-only: it loads the
@@ -6,14 +7,9 @@ import { RESUME_MAX_CHARS } from "./profile";
  * here trusts the browser's claimed file type: the bytes must look like the type.
  */
 
-export type ResumeFileType = "pdf" | "docx";
 export type ExtractResult = { ok: true; text: string } | { ok: false; error: string };
 
-export const RESUME_FILE_MAX_BYTES = 5 * 1024 * 1024;
-export const RESUME_FILE_MIME: Record<ResumeFileType, string> = {
-  pdf: "application/pdf",
-  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-};
+export { RESUME_FILE_MAX_BYTES, type ResumeFileType };
 /** Resumes are short; a long PDF is more likely a portfolio or a mistake, and costs time to read. */
 const MAX_PDF_PAGES = 20;
 /** A DOCX is a zip. Refuse files that would unpack to more than this (zip bombs). */

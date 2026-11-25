@@ -34,10 +34,18 @@ export async function readUploadedResume(type: unknown): Promise<ReadFileState> 
   const sb = await createSupabaseServer();
   const { data, error } = await sb.storage.from(RESUME_BUCKET).download(resumePath(user.id, type));
   if (error || !data) return { status: "error", error: "Couldn't find the uploaded file. Try uploading it again." };
-  if (data.size > RESUME_FILE_MAX_BYTES) return { status: "error", error: "That file is over 5 MB." };
+  if (data.size > RESUME_FILE_MAX_BYTES) {
+    await sb.storage.from(RESUME_BUCKET).remove([resumePath(user.id, type)]);
+    return { status: "error", error: "That file is over 5 MB." };
+  }
 
   const result = await extractResumeText(new Uint8Array(await data.arrayBuffer()), type);
-  if (!result.ok) return { status: "error", error: result.error };
+  if (!result.ok) {
+    // Don't keep a file we can't use: it would show as the stored resume instead of the last good one.
+    await sb.storage.from(RESUME_BUCKET).remove([resumePath(user.id, type)]);
+    revalidatePath("/profile");
+    return { status: "error", error: result.error };
+  }
 
   // Keep one file: uploading a PDF replaces an older DOCX, and the other way round.
   const other = RESUME_FILE_TYPES.find((t) => t !== type)!;
