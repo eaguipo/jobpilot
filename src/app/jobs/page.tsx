@@ -3,7 +3,7 @@ import { createSupabaseServer, requireUser } from "@/lib/supabase/server";
 import Link from "next/link";
 import { countJobsByStatus, getProfile, isJobStatus, JOB_STATUSES, listJobs, listStatusEventsByJob, type StatusEvent } from "@/lib/data";
 import { getAiQuota } from "@/lib/quota";
-import { AddJobForm } from "./add-job-form";
+import { AddJob } from "./add-job";
 import { MatchPanel } from "./match-panel";
 import { JobActionButton } from "./job-action-button";
 import { scoreJobAction } from "./score-actions";
@@ -70,7 +70,7 @@ export default async function JobsPage({ searchParams }: { searchParams: Promise
 
       <section aria-labelledby="add-job" className="rounded-xl border border-black/10 p-4 dark:border-white/15">
         <h2 id="add-job" className="mb-4 text-lg font-medium">Add a job</h2>
-        <AddJobForm />
+        <AddJob />
       </section>
 
       <section aria-labelledby="job-list" className="mt-8">
