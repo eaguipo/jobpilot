@@ -65,7 +65,7 @@ export type ParseState = { status: "idle" } | { status: "parsed"; leftOut: numbe
  * Uses one AI run. The structure is saved only if the resume is still the text that was
  * parsed, so an edit made while the model was working isn't paired with old sections.
  */
-export async function parseResumeAction(_prev: ParseState, _formData?: FormData): Promise<ParseState> {
+export async function parseResumeAction(): Promise<ParseState> {
   await requireUser("/profile");
   const sb = await createSupabaseServer();
   const profile = await getProfile(sb);

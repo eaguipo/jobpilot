@@ -32,7 +32,7 @@ test("home page links to the Profile page", async ({ page }) => {
   await expect(page).toHaveTitle("JobPilot");
   await page.getByRole("link", { name: "Go to Profile" }).click();
   await expect(page).toHaveURL(/\/profile$/);
-  await expect(page.getByRole("heading", { name: "Profile" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Profile", exact: true })).toBeVisible();
 });
 
 test("starts empty: no resume, Save disabled, no status message", async ({ page }) => {
