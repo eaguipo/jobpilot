@@ -14,6 +14,13 @@ export { isJobStatus, JOB_STATUSES, type JobStatus } from "./statuses";
 export interface Profile {
   resumeText: string;
   updatedAt: string;
+  /** md5 of resumeText, kept by Postgres (story 12). */
+  resumeMd5: string;
+  /** The resume parsed into sections, unchecked: read it with readStructuredResume(). */
+  structured: unknown;
+  /** md5 of the resume text the structure was parsed from; differs from resumeMd5 once the resume changes. */
+  structuredFrom: string | null;
+  structuredAt: string | null;
 }
 
 export interface Job {
@@ -61,10 +68,28 @@ const fail = (what: string, error: { message: string; code?: string }): never =>
 
 // ---- profile ----
 
+const PROFILE_COLUMNS = "resume_text, updated_at, resume_md5, structured, structured_from, structured_at";
+interface ProfileRow {
+  resume_text: string;
+  updated_at: string;
+  resume_md5: string;
+  structured: unknown;
+  structured_from: string | null;
+  structured_at: string | null;
+}
+const toProfile = (r: ProfileRow): Profile => ({
+  resumeText: r.resume_text,
+  updatedAt: r.updated_at,
+  resumeMd5: r.resume_md5,
+  structured: r.structured,
+  structuredFrom: r.structured_from,
+  structuredAt: r.structured_at,
+});
+
 export async function getProfile(sb: SupabaseClient): Promise<Profile | null> {
-  const { data, error } = await sb.from("profiles").select("resume_text, updated_at").maybeSingle();
+  const { data, error } = await sb.from("profiles").select(PROFILE_COLUMNS).maybeSingle<ProfileRow>();
   if (error) fail("Loading your resume failed", error);
-  return data ? { resumeText: data.resume_text, updatedAt: data.updated_at } : null;
+  return data ? toProfile(data) : null;
 }
 
 /** One resume per user; saving again replaces it. */
@@ -72,10 +97,24 @@ export async function saveProfile(sb: SupabaseClient, userId: string, resumeText
   const { data, error } = await sb
     .from("profiles")
     .upsert({ user_id: userId, resume_text: resumeText }, { onConflict: "user_id" })
-    .select("resume_text, updated_at")
-    .single();
+    .select(PROFILE_COLUMNS)
+    .single<ProfileRow>();
   if (error) fail("Saving your resume failed", error);
-  return { resumeText: data!.resume_text, updatedAt: data!.updated_at };
+  return toProfile(data!);
+}
+
+/**
+ * Saves the parsed structure (story 12), but only if the resume is still the text it was
+ * parsed from (`fromMd5`). Returns false when the resume changed meanwhile; nothing is saved then.
+ */
+export async function saveStructuredResume(sb: SupabaseClient, fromMd5: string, structured: object): Promise<boolean> {
+  const { data, error } = await sb
+    .from("profiles")
+    .update({ structured, structured_from: fromMd5, structured_at: new Date().toISOString() })
+    .eq("resume_md5", fromMd5)
+    .select("user_id");
+  if (error) fail("Saving your structured profile failed", error);
+  return (data?.length ?? 0) > 0;
 }
 
 // ---- jobs ----

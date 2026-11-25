@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import { createSupabaseServer, requireUser } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/data";
 import { getStoredResumeFile, RESUME_BUCKET, resumePath } from "@/lib/resume-storage";
+import { readStructuredResume } from "@/lib/resume-parse";
 import { ProfileForm } from "./profile-form";
+import { StructuredProfile } from "./structured-profile";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Profile · JobPilot" };
@@ -29,6 +31,14 @@ export default async function ProfilePage() {
         initialUpdatedAt={profile?.updatedAt ?? null}
         storedFile={file ? { ...file, downloadUrl: download } : null}
       />
+      <div className="mt-10">
+        <StructuredProfile
+          structured={readStructuredResume(profile?.structured)}
+          structuredAt={profile?.structuredAt ?? null}
+          hasResume={!!profile}
+          stale={!!profile?.structuredFrom && profile.structuredFrom !== profile.resumeMd5}
+        />
+      </div>
     </main>
   );
 }
