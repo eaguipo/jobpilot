@@ -2,7 +2,11 @@
 
 import { createSupabaseServer, requireUser } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import { saveProfile } from "@/lib/data";
+import { getProfile, saveProfile, saveStructuredResume } from "@/lib/data";
+import { getGenerator, llmErrorMessage } from "@/lib/ai";
+import { LlmError } from "@/lib/llm";
+import { quotaMessage, takeAiQuota } from "@/lib/quota";
+import { parseResume } from "@/lib/resume-parse";
 import { checkResume } from "@/lib/profile";
 import { extractResumeText, RESUME_FILE_MAX_BYTES } from "@/lib/resume-file";
 import { isResumeFileType, RESUME_BUCKET, RESUME_FILE_TYPES, resumePath } from "@/lib/resume-storage";
@@ -52,4 +56,35 @@ export async function readUploadedResume(type: unknown): Promise<ReadFileState> 
   await sb.storage.from(RESUME_BUCKET).remove([resumePath(user.id, other)]);
   revalidatePath("/profile");
   return { status: "read", text: result.text };
+}
+
+export type ParseState = { status: "idle" } | { status: "parsed"; leftOut: number } | { status: "error"; error: string };
+
+/**
+ * Story 12: split the saved master resume into sections with the model and store them.
+ * Uses one AI run. The structure is saved only if the resume is still the text that was
+ * parsed, so an edit made while the model was working isn't paired with old sections.
+ */
+export async function parseResumeAction(_prev: ParseState, _formData?: FormData): Promise<ParseState> {
+  await requireUser("/profile");
+  const sb = await createSupabaseServer();
+  const profile = await getProfile(sb);
+  if (!profile) return { status: "error", error: "Save your resume first." };
+  const quota = await takeAiQuota(sb, "parse");
+  if (!quota.allowed) return { status: "error", error: quotaMessage(quota) };
+
+  try {
+    const { structured, leftOut } = await parseResume(profile.resumeText, getGenerator());
+    if (!(await saveStructuredResume(sb, profile.resumeMd5, structured)))
+      return { status: "error", error: "Your resume changed while it was being read. Try again." };
+    revalidatePath("/profile");
+    return { status: "parsed", leftOut };
+  } catch (e) {
+    if (e instanceof LlmError) {
+      // Log the kind and our own message only: never the key or resume text.
+      console.error(`[parse] ${e.kind}: ${e.message}`);
+      return { status: "error", error: llmErrorMessage(e.kind, "read this resume") };
+    }
+    throw e;
+  }
 }

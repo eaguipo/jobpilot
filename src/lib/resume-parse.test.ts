@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { fakeGenerate } from "./fake-llm";
 import { LlmError } from "./llm";
 import {
   buildParsePrompt,
@@ -165,5 +166,38 @@ describe("readStructuredResume", () => {
       education: [],
       skills: [],
     });
+  });
+});
+
+describe("the offline fake used by e2e", () => {
+  const E2E_RESUME = [
+    "Jordan Reyes - Frontend Engineer",
+    "jordan.reyes@example.com",
+    "EXPERIENCE",
+    "Tailspin Toys (2021-present) - Senior Frontend Engineer",
+    "- Built React and TypeScript storefronts with Next.js for 300k shoppers.",
+    "Fabrikam (2018-2021) - Frontend Engineer",
+    "- Ran accessibility reviews and the shared component library.",
+    "EDUCATION",
+    "B.S. Computer Science, University of Texas at Austin, 2014-2018",
+    "SKILLS: React, TypeScript, Next.js, CSS",
+  ].join("\n");
+
+  it("produces a structure that passes the resume check", async () => {
+    const { structured, leftOut } = await parseResume(E2E_RESUME, fakeGenerate);
+    expect(leftOut).toBe(0);
+    expect(structured.contact).toMatchObject({ name: "Jordan Reyes", email: "jordan.reyes@example.com" });
+    expect(structured.experience.map((e) => `${e.title} @ ${e.company} ${e.start}-${e.end} (${e.bullets.length})`)).toEqual([
+      "Senior Frontend Engineer @ Tailspin Toys 2021-present (1)",
+      "Frontend Engineer @ Fabrikam 2018-2021 (1)",
+    ]);
+    expect(structured.education).toEqual([{ school: "University of Texas at Austin", degree: "B.S. Computer Science", start: "2014", end: "2018" }]);
+    expect(structured.skills).toEqual(["React", "TypeScript", "Next.js", "CSS"]);
+  });
+
+  it("can invent a job, which the check leaves out", async () => {
+    const { structured, leftOut } = await parseResume(`${E2E_RESUME}\nFAKE_LLM_INVENT`, fakeGenerate);
+    expect(structured.experience.map((e) => e.company)).not.toContain("Hooli");
+    expect(leftOut).toBe(1);
   });
 });
